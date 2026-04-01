@@ -1,4 +1,4 @@
-import { useState,useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ interface ReportFiltersProps {
   setClassificationFilter: (value: string) => void;
   categoryFilter: string;
   setCategoryFilter: (value: string) => void;
+  projectOptions: any[];
   projectFilter: string;
   setProjectFilter: (value: string) => void;
   entryMethodFilter: string;
@@ -32,7 +33,7 @@ interface ReportFiltersProps {
   setStartDate: (value: string) => void;
   endDate: string;
   setEndDate: (value: string) => void;
-  setAttendanceTypeFilter:(value:string)=>void;
+  setAttendanceTypeFilter: (value: string) => void;
 }
 
 export function ReportFilters({
@@ -42,6 +43,7 @@ export function ReportFilters({
   setClassificationFilter,
   categoryFilter,
   setCategoryFilter,
+  projectOptions,
   projectFilter,
   setProjectFilter,
   entryMethodFilter,
@@ -54,90 +56,129 @@ export function ReportFilters({
   setStartDate,
   endDate,
   setEndDate,
-  setAttendanceTypeFilter
+  setAttendanceTypeFilter,
 }: ReportFiltersProps) {
   const [entities, setEntities] = useState([]);
   const [classifications, setClassifications] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [projects, setProjects] = useState([]);
   const [attendaceTypes, setAttendanceTypes] = useState([]);
-  const [selectedEntity, setSelectedEntity] = useState<string | undefined>("all");
-  const [selectedClassification, setSelectedClassification] = useState<string | undefined>("all");
-  const [selectedAttendaceType, setSelectedAttendanceType] = useState<string | undefined>("all");
-  const [selectedCategory, setSelectedCategory] = useState<string | undefined>("all");
-  const [selectedProject, setSelectedProject] = useState<string | undefined>("all");
-  const loadEntities = ()=>{
-    axios.post(BASEURL+'entities',{},{
-      headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${TOKEN()}` }
-    }).then(response=>{
-      let entities = response.data.data;
-      setEntities(entities);
-    })
-  }
+  const [selectedEntity, setSelectedEntity] = useState<string | undefined>(
+    "all",
+  );
+  const [selectedClassification, setSelectedClassification] = useState<
+    string | undefined
+  >("all");
+  const [selectedAttendaceType, setSelectedAttendanceType] = useState<
+    string | undefined
+  >("all");
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(
+    "all",
+  );
+  const [selectedProject, setSelectedProject] = useState<string | undefined>(
+    "all",
+  );
+  const loadEntities = () => {
+    axios
+      .post(
+        BASEURL + "entities",
+        {},
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${TOKEN()}`,
+          },
+        },
+      )
+      .then((response) => {
+        let entities = response.data.data;
+        setEntities(entities);
+      });
+  };
   const handleEntityChange = (value: string) => {
     setSelectedEntity(value);
-    setEntityFilter(value);  
+    setEntityFilter(value);
   };
   const handleClassificationChange = (value: string) => {
     setSelectedClassification(value);
-    setClassificationFilter(value);  
+    setClassificationFilter(value);
   };
   const handleCategoryChange = (value: string) => {
     setSelectedCategory(value);
-    setCategoryFilter(value);  
+    setCategoryFilter(value);
   };
   const handleProjectChange = (value: string) => {
     setSelectedProject(value);
-    setProjectFilter(value);  
+    setProjectFilter(value);
   };
   const handleAttendaceType = (value: string) => {
     setSelectedAttendanceType(value);
     setAttendanceTypeFilter(value);
   };
-  const loadCategories = ()=>{
-    axios.post(BASEURL+'categories',{},{
-      headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${TOKEN()}` }
-    }).then(response=>{
-      let categories = response.data.data;
-      setCategories(categories);
-    })
-  }
-  const loadClassifications = ()=>{
-    axios.post(BASEURL+'classifications',{},{
-      headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${TOKEN()}` }
-    }).then(response=>{
-      let classifications = response.data.data;
-      setClassifications(classifications);
-    })
-  }
-  const loadProjects = ()=>{
-    axios.post(BASEURL+'projects',{},{
-      headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${TOKEN()}` }
-    }).then(response=>{
-      const projects = response.data?.data?.all_projects || [];
-      setProjects(projects);
-    })
-  }
-  const loadAttendanceTypes = ()=>{
-    axios.post(BASEURL+'attendancetypes',{},{
-      headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${TOKEN()}` }
-    }).then(response=>{
-      const attendacetypes = response.data?.data || [];
-      setAttendanceTypes(attendacetypes);
-    })
-  }
-  useEffect(()=>{
+  const loadCategories = () => {
+    axios
+      .post(
+        BASEURL + "categories",
+        {},
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${TOKEN()}`,
+          },
+        },
+      )
+      .then((response) => {
+        let categories = response.data.data;
+        setCategories(categories);
+      });
+  };
+  const loadClassifications = () => {
+    axios
+      .post(
+        BASEURL + "classifications",
+        {},
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${TOKEN()}`,
+          },
+        },
+      )
+      .then((response) => {
+        let classifications = response.data.data;
+        setClassifications(classifications);
+      });
+  };
+
+  const loadAttendanceTypes = () => {
+    axios
+      .post(
+        BASEURL + "attendancetypes",
+        {},
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${TOKEN()}`,
+          },
+        },
+      )
+      .then((response) => {
+        const attendacetypes = response.data?.data || [];
+        setAttendanceTypes(attendacetypes);
+      });
+  };
+  useEffect(() => {
     if (!startDate) {
-    const today = new Date();
-    const formattedDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
-    setStartDate(formattedDate);
-  }
+      const today = new Date();
+      const formattedDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
+      setStartDate(formattedDate);
+    }
     loadEntities();
     loadClassifications();
     loadCategories();
-    loadProjects();
+    // loadProjects();
+    // setProjects(projectFilter);
     loadAttendanceTypes();
-  },[])
+  }, []);
   return (
     <div className="space-y-4 bg-white p-4 rounded-lg border border-gray-200">
       <div className="grid grid-cols-4 gap-4">
@@ -145,7 +186,7 @@ export function ReportFilters({
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Entity
           </label>
-          <Select  value={selectedEntity} onValueChange={handleEntityChange} >
+          <Select value={selectedEntity} onValueChange={handleEntityChange}>
             <SelectTrigger>
               <SelectValue placeholder="All Entities" />
             </SelectTrigger>
@@ -171,9 +212,9 @@ export function ReportFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Projects</SelectItem>
-             {Array.isArray(projects) && projects.length > 0 ? (
-                projects.map((project, index) => (
-                  <SelectItem key={index} value={project.id}>
+              {Array.isArray(projectOptions) && projectOptions.length > 0 ? (
+                projectOptions.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
                     {project.projectname}
                   </SelectItem>
                 ))
@@ -204,13 +245,13 @@ export function ReportFilters({
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Employee Name
           </label>
-            
-            <Input
-              type="text"
-              placeholder="Enter employee name"
-              value={searchName}
-              onChange={(e) => setSearchName(e.target.value)}
-            />
+
+          <Input
+            type="text"
+            placeholder="Enter employee name"
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+          />
         </div>
 
         <div>
@@ -236,7 +277,10 @@ export function ReportFilters({
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Classification
           </label>
-          <Select value={selectedClassification} onValueChange={handleClassificationChange}>
+          <Select
+            value={selectedClassification}
+            onValueChange={handleClassificationChange}
+          >
             <SelectTrigger>
               <SelectValue placeholder="All Classifications" />
             </SelectTrigger>
@@ -255,13 +299,16 @@ export function ReportFilters({
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Attendance Type
           </label>
-          <Select value={selectedAttendaceType} onValueChange={handleAttendaceType}>
+          <Select
+            value={selectedAttendaceType}
+            onValueChange={handleAttendaceType}
+          >
             <SelectTrigger>
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              {attendaceTypes.map((attendance_type,index)=>(
+              {attendaceTypes.map((attendance_type, index) => (
                 <SelectItem key={index} value={attendance_type.attendance_type}>
                   {attendance_type.attendance_type}
                 </SelectItem>
@@ -271,18 +318,17 @@ export function ReportFilters({
         </div>
 
         <div>
-          
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Date
           </label>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-               className="w-full no-clear"
-            />
-            <style>
-  {`
+          <Input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="w-full no-clear"
+          />
+          <style>
+            {`
     /* Remove clear and spin buttons for inputs with .no-clear class */
     input.no-clear::-webkit-clear-button,
     input.no-clear::-webkit-inner-spin-button {
@@ -300,13 +346,11 @@ export function ReportFilters({
       display: none !important;
     }
   `}
-</style>
+          </style>
         </div>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
-        
-
         {/* <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Entry Method

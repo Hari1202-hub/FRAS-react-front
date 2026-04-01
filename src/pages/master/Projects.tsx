@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { Upload, Eye, Trash, Search } from "lucide-react";
 import ProjectFilters from "./ProjectFilters";
@@ -22,11 +21,11 @@ const DUMMY_PROJECTS = [
     entity: "Tanseeq Construction Ltd",
     assignedEmployees: [
       { id: "e1", name: "John Smith" },
-      { id: "e2", name: "Sarah Johnson" }
+      { id: "e2", name: "Sarah Johnson" },
     ],
     startDate: "2024-12-20",
     endDate: "2025-02-20",
-    status: "Active"
+    status: "Active",
   },
   {
     id: "2",
@@ -37,7 +36,7 @@ const DUMMY_PROJECTS = [
     assignedEmployees: [{ id: "e3", name: "Emily Davis" }],
     startDate: "2025-01-15",
     endDate: "2025-06-01",
-    status: "Inactive"
+    status: "Inactive",
   },
   {
     id: "3",
@@ -48,8 +47,8 @@ const DUMMY_PROJECTS = [
     assignedEmployees: [{ id: "e4", name: "Robert Williams" }],
     startDate: "2025-02-10",
     endDate: "2025-04-01",
-    status: "Active"
-  }
+    status: "Active",
+  },
 ];
 
 const DUMMY_EMPLOYEES = [
@@ -58,11 +57,16 @@ const DUMMY_EMPLOYEES = [
   { id: "e3", name: "Emily Davis" },
   { id: "e4", name: "Robert Williams" },
   { id: "e5", name: "Brian Carson" },
-  { id: "e6", name: "Amy Howard" }
+  { id: "e6", name: "Amy Howard" },
 ];
 
 const DUMMY_LOCATIONS = [
-  "Downtown Site", "Bridge Zone A", "East Industrial", "North Express", "Greenfield", "Central Med"
+  "Downtown Site",
+  "Bridge Zone A",
+  "East Industrial",
+  "North Express",
+  "Greenfield",
+  "Central Med",
 ];
 
 const DUMMY_IMPORTED_PROJECTS = [
@@ -74,11 +78,11 @@ const DUMMY_IMPORTED_PROJECTS = [
     entity: "Tanseeq Construction Ltd",
     assignedEmployees: [
       { id: "e5", name: "Brian Carson" },
-      { id: "e6", name: "Amy Howard" }
+      { id: "e6", name: "Amy Howard" },
     ],
     startDate: "2025-03-10",
     endDate: "2025-09-15",
-    status: "Active"
+    status: "Active",
   },
   {
     id: "np102",
@@ -89,7 +93,7 @@ const DUMMY_IMPORTED_PROJECTS = [
     assignedEmployees: [{ id: "e2", name: "Sarah Johnson" }],
     startDate: "2025-07-01",
     endDate: "2026-02-15",
-    status: "Inactive"
+    status: "Inactive",
   },
   {
     id: "np103",
@@ -99,12 +103,12 @@ const DUMMY_IMPORTED_PROJECTS = [
     entity: "Tanseeq Landscaping LLC",
     assignedEmployees: [
       { id: "e4", name: "Robert Williams" },
-      { id: "e3", name: "Emily Davis" }
+      { id: "e3", name: "Emily Davis" },
     ],
     startDate: "2025-05-15",
     endDate: "2026-01-10",
-    status: "Active"
-  }
+    status: "Active",
+  },
 ];
 
 export default function ProjectsPage() {
@@ -115,7 +119,7 @@ export default function ProjectsPage() {
     entity: "",
     status: "All",
     fromDate: null,
-    toDate: null
+    toDate: null,
   });
   const [importOpen, setImportOpen] = useState(false);
   const [tanseeqImportOpen, setTanseeqImportOpen] = useState(false);
@@ -126,19 +130,33 @@ export default function ProjectsPage() {
 
   const filteredProjects = useMemo(() => {
     return projects.filter((p) => {
-      if (filters.name && !p.name.toLowerCase().includes(filters.name.trim().toLowerCase()) && 
-          !p.projectId?.toLowerCase().includes(filters.name.trim().toLowerCase())) 
+      if (
+        filters.name &&
+        !p.name.toLowerCase().includes(filters.name.trim().toLowerCase()) &&
+        !p.projectId?.toLowerCase().includes(filters.name.trim().toLowerCase())
+      )
         return false;
-      
-      if (filters.entity && !p.entity?.toLowerCase().includes(filters.entity.trim().toLowerCase()))
+
+      if (
+        filters.entity &&
+        !p.entity?.toLowerCase().includes(filters.entity.trim().toLowerCase())
+      )
         return false;
-        
-      if (filters.location && filters.location !== "" && p.location !== filters.location) 
+
+      if (
+        filters.location &&
+        filters.location !== "" &&
+        p.location !== filters.location
+      )
         return false;
-      
-      if (filters.status && filters.status !== "All" && p.status !== filters.status) 
+
+      if (
+        filters.status &&
+        filters.status !== "All" &&
+        p.status !== filters.status
+      )
         return false;
-      
+
       // Filter by from date
       if (filters.fromDate) {
         const projectStartDate = new Date(p.startDate);
@@ -147,7 +165,7 @@ export default function ProjectsPage() {
           return false;
         }
       }
-      
+
       // Filter by to date
       if (filters.toDate) {
         const projectEndDate = new Date(p.endDate);
@@ -156,25 +174,25 @@ export default function ProjectsPage() {
           return false;
         }
       }
-      
+
       return true;
     });
   }, [projects, filters]);
 
   const handleImport = () => {
-    setProjects(prev => [
+    setProjects((prev) => [
       ...prev,
-      ...DUMMY_IMPORTED_PROJECTS.map(p => ({
+      ...DUMMY_IMPORTED_PROJECTS.map((p) => ({
         ...p,
-        id: p.id + "-" + Math.random().toString(36).substring(2, 6)
-      }))
+        id: p.id + "-" + Math.random().toString(36).substring(2, 6),
+      })),
     ]);
     setImportOpen(false);
   };
 
   const handleTanseeqImport = (tanseeqProjects) => {
-    const maxId = Math.max(...projects.map(p => Number(p.id)));
-    
+    const maxId = Math.max(...projects.map((p) => Number(p.id)));
+
     const projectsToAdd = tanseeqProjects.map((project, index) => ({
       id: String(maxId + index + 1),
       name: project.name,
@@ -182,31 +200,35 @@ export default function ProjectsPage() {
       assignedEmployees: [],
       startDate: project.startDate,
       endDate: project.endDate,
-      status: project.status === "Approved" ? "Active" : "Inactive"
+      status: project.status === "Approved" ? "Active" : "Inactive",
     }));
-    
+
     setProjects([...projects, ...projectsToAdd]);
   };
 
   const handleDelete = (project) => {
-    setProjects((prev) => prev.filter(p => p.id !== project.id));
+    setProjects((prev) => prev.filter((p) => p.id !== project.id));
     setDeleteProject(null);
   };
 
-  const handleAssignLocation = (projectId: string, geofenceData: string, locationName: string) => {
-    setProjects(prev => 
-      prev.map(p => {
+  const handleAssignLocation = (
+    projectId: string,
+    geofenceData: string,
+    locationName: string,
+  ) => {
+    setProjects((prev) =>
+      prev.map((p) => {
         if (p.id === projectId) {
           return {
             ...p,
             location: locationName, // Store the location name
             coordinates: {
-              geofenceData
-            }
+              geofenceData,
+            },
           };
         }
         return p;
-      })
+      }),
     );
   };
 
@@ -215,7 +237,9 @@ export default function ProjectsPage() {
   return (
     <div className="space-y-5 px-1 pt-5">
       <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-end">
-        <h1 className="text-2xl font-bold text-gray-800 mb-1 md:mb-0">Projects</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-1 md:mb-0">
+          Projects
+        </h1>
         <div className="flex flex-col md:flex-row gap-3">
           <Button
             className="bg-proscape hover:bg-proscape-dark text-white font-medium flex gap-2"
@@ -241,7 +265,9 @@ export default function ProjectsPage() {
         </div>
         <div className="block md:hidden">
           {filteredProjects.length === 0 ? (
-            <Card className="p-8 text-center text-gray-500">No projects found</Card>
+            <Card className="p-8 text-center text-gray-500">
+              No projects found
+            </Card>
           ) : (
             <div className="space-y-4">
               {filteredProjects.map((project) => (
@@ -257,24 +283,24 @@ export default function ProjectsPage() {
           )}
         </div>
       </div>
-      <ImportProjectsModal 
-        open={importOpen} 
-        onOpenChange={setImportOpen} 
-        onImport={handleImport} 
+      <ImportProjectsModal
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImport={handleImport}
       />
       <TanseeqImportModal
         open={tanseeqImportOpen}
         onOpenChange={setTanseeqImportOpen}
         onImport={handleTanseeqImport}
       />
-      <ProjectViewModal 
-        project={viewProject} 
-        onClose={() => setViewProject(null)} 
+      <ProjectViewModal
+        project={viewProject}
+        onClose={() => setViewProject(null)}
       />
-      <DeleteProjectDialog 
-        project={deleteProject} 
-        onCancel={() => setDeleteProject(null)} 
-        onConfirm={() => handleDelete(deleteProject)} 
+      <DeleteProjectDialog
+        project={deleteProject}
+        onCancel={() => setDeleteProject(null)}
+        onConfirm={() => handleDelete(deleteProject)}
       />
       <AssignLocationModal
         project={locationProject}

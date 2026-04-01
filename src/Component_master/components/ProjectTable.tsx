@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -18,7 +17,12 @@ interface ProjectTableProps {
   onAssignLocation: (project: any) => void;
 }
 
-export default function ProjectTable({ projects, onView, onDelete, onAssignLocation }: ProjectTableProps) {
+export default function ProjectTable({
+  projects,
+  onView,
+  onDelete,
+  onAssignLocation,
+}: ProjectTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -27,6 +31,7 @@ export default function ProjectTable({ projects, onView, onDelete, onAssignLocat
           <TableHead>Name</TableHead>
           <TableHead>Entity</TableHead>
           <TableHead>Location</TableHead>
+          <TableHead>Time Keeper</TableHead>
           <TableHead>Start Date</TableHead>
           <TableHead>End Date</TableHead>
           <TableHead>Status</TableHead>
@@ -34,28 +39,50 @@ export default function ProjectTable({ projects, onView, onDelete, onAssignLocat
         </TableRow>
       </TableHeader>
       <TableBody>
-        {projects.map((project,index) => (
+        {projects.map((project, index) => (
           <TableRow key={index}>
             <TableCell className="font-medium">{project.projectid}</TableCell>
             <TableCell>{project.projectname}</TableCell>
             <TableCell>{project.entity.entityname}</TableCell>
             <TableCell>
               {project.location_shotname ? (
-                <span className="text-green-600">{project.location_shotname}</span>
+                <span className="text-green-600">
+                  {project.location_shotname}
+                </span>
               ) : (
-                <Badge variant="outline" className="text-orange-600 border-orange-200">
+                <Badge
+                  variant="outline"
+                  className="text-orange-600 border-orange-200"
+                >
                   Not Assigned
                 </Badge>
               )}
             </TableCell>
+
+            <TableCell>
+              {project.user_project?.user?.name ? (
+                <span className="text-blue-600">
+                  {project.user_project.user.name}
+                </span>
+              ) : (
+                <Badge variant="outline" className="text-gray-500">
+                  Not Assigned
+                </Badge>
+              )}
+            </TableCell>
+            
             <TableCell>{project.startdate}</TableCell>
             <TableCell>{project.enddate}</TableCell>
             <TableCell>
-              <Badge 
+              <Badge
                 variant={project.isactive === true ? "default" : "secondary"}
-                className={project.isactive === true ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}
+                className={
+                  project.isactive === true
+                    ? "bg-green-100 text-green-800"
+                    : "bg-gray-100 text-gray-800"
+                }
               >
-                {project.isactive?'Active':'Inactive'}
+                {project.isactive ? "Active" : "Inactive"}
               </Badge>
             </TableCell>
             <TableCell className="text-right">

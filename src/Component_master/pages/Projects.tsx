@@ -1,4 +1,4 @@
-import { useState,useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Plus, Search, Filter, Grid, List } from "lucide-react";
@@ -27,28 +27,59 @@ export default function Projects() {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [tanseeqImportModalOpen, setTanseeqImportModalOpen] = useState(false);
   const [deleteProject, setDeleteProject] = useState(null);
-  const [entities,setEntities] = useState([]);
+  const [entities, setEntities] = useState([]);
 
-  const loadProjects = ()=>{
-    axios.post(BASEURL+'web_get_projects',{},{
-      headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${TOKEN()}` }
-    }).then(response=>{
-      let pojects = response.data.data;
-      setProjects(pojects);
-    })
-  }
+  const loadProjects = () => {
+    axios
+      .post(
+        BASEURL + "web_get_projects",
+        {},
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${TOKEN()}`,
+          },
+        },
+      )
+      .then((response) => {
+        let pojects = response.data.data;
+        setProjects(pojects);
+      });
+  };
 
-  const loadEntities = ()=>{
-    axios.post(BASEURL+'entities',{},{
-      headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${TOKEN()}` }
-    }).then(response=>{
-      let entities = response.data.data;
-      setEntities(entities);
-    })
-  }
+  const loadEntities = () => {
+    axios
+      .post(
+        BASEURL + "entities",
+        {},
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${TOKEN()}`,
+          },
+        },
+      )
+      .then((response) => {
+        let entities = response.data.data;
+        setEntities(entities);
+      });
+  };
 
-  const filteredProjects = projects.filter(project => {
-    //console.log(project);
+  const filteredProjects = projects.filter((project) => {
+    const matchesSearch =
+      project.projectname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.projectid?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.entityname?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "active" && project.isactive === true) ||
+      (statusFilter === "inactive" && project.isactive === false);
+
+    const matchesEntity =
+      entityFilter === "all" || project.entity_id == entityFilter; // 👈 make sure this matches your API field
+
+    return matchesSearch && matchesStatus && matchesEntity;
     return project;
   });
 
@@ -66,44 +97,59 @@ export default function Projects() {
     setDeleteProject(project);
   };
 
-  const handleLocationSave = (projectId: any, latitude: string, longitude: string,address:string) => {
+  const handleLocationSave = (
+    projectId: any,
+    latitude: string,
+    longitude: string,
+    address: string,
+  ) => {
     const postData = new FormData();
-    postData.append('project_id', projectId);
-    postData.append('latitude', latitude);
-    postData.append('address', address);
-     // Add filters to the request
-    postData.append('longitude', longitude);
-    axios.post(BASEURL+'update_project',postData, {
-      headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${TOKEN()}` }
-    }).then(response=>{
+    postData.append("project_id", projectId);
+    postData.append("latitude", latitude);
+    postData.append("address", address);
+    // Add filters to the request
+    postData.append("longitude", longitude);
+    axios
+      .post(BASEURL + "update_project", postData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${TOKEN()}`,
+        },
+      })
+      .then((response) => {
         toast({
-            title: "Success",
-            description: "Project updated successfully.",
-          });
-          loadProjects();
-      setLocationModalOpen(false);
-    })
+          title: "Success",
+          description: "Project updated successfully.",
+        });
+        loadProjects();
+        setLocationModalOpen(false);
+      });
   };
   const confirmDelete = () => {
-    if(deleteProject){
-        const formData = new FormData();
-        formData.append('id',deleteProject.guid)
-        axios.post(BASEURL+'delete_project', formData, {
-          headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${TOKEN()}` }
-        }).then(response => {
-            
-            toast({
-              title: "Success",
-              description: "Role deleted successfully.",
-            });
-            loadProjects();
-        }).catch(error => {
-            if (error.response && error.response.status === 400) {
-              toast.error("Login failed");
-            }
+    if (deleteProject) {
+      const formData = new FormData();
+      formData.append("id", deleteProject.guid);
+      axios
+        .post(BASEURL + "delete_project", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${TOKEN()}`,
+          },
+        })
+        .then((response) => {
+          toast({
+            title: "Success",
+            description: "Role deleted successfully.",
+          });
+          loadProjects();
+        })
+        .catch((error) => {
+          if (error.response && error.response.status === 400) {
+            toast.error("Login failed");
+          }
         });
     }
-  }
+  };
 
   /* const handleImportProjects = (newProjects: any[]) => {
     const maxId = Math.max(...projects.map(p => p.id));
@@ -125,15 +171,56 @@ export default function Projects() {
   useEffect(() => {
     loadProjects();
     loadEntities();
-  }, [])
-  
+  }, []);
+
+  const handleImportProjects = async (parsedProjects: any[]) => {
+    if (!parsedProjects || parsedProjects.length === 0) return;
+
+    try {
+      const response = await axios.post(
+        BASEURL + "importProjectCsv",
+        { data: parsedProjects }, // 👈 IMPORTANT
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${TOKEN()}`,
+          },
+        },
+      );
+
+      toast({
+        title: "Success",
+        description: `Imported ${response.data.inserted} projects. Updated ${response.data.updated}`,
+      });
+
+      loadProjects();
+      setImportModalOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Import failed",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Projects</h1>
-          <p className="text-gray-600 mt-1">Manage and track all project information</p>
+          <p className="text-gray-600 mt-1">
+            Manage and track all project information
+          </p>
+        </div>
+        <div className="importExport-btn">
+          <Button
+            onClick={() => setImportModalOpen(true)}
+            className="bg-proscape text-white"
+          >
+            Import Projects
+          </Button>
         </div>
       </div>
 
@@ -152,7 +239,7 @@ export default function Projects() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-2 md:items-center">
             <div className="flex items-center gap-2">
               <Filter className="h-5 w-5 text-gray-400" />
@@ -166,15 +253,17 @@ export default function Projects() {
                 <option value="inactive">Inactive</option>
               </select>
             </div>
-            
+
             <select
               className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proscape"
               value={entityFilter}
               onChange={(e) => setEntityFilter(e.target.value)}
             >
               <option value="all">All Entities</option>
-              {entities.map((entity1,index1) => (
-                <option value={entity1.id} key={index1}>{entity1.entityname}</option>
+              {entities.map((entity1, index1) => (
+                <option value={entity1.id} key={index1}>
+                  {entity1.entityname}
+                </option>
               ))}
             </select>
 
@@ -207,7 +296,7 @@ export default function Projects() {
         {isMobile || viewType === "grid" ? (
           <div className="p-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredProjects.map(project => (
+              {filteredProjects.map((project) => (
                 <ProjectCardMobile
                   key={project.id}
                   project={project}
@@ -240,14 +329,16 @@ export default function Projects() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-proscape">{projects.length}</div>
+            <div className="text-2xl font-bold text-proscape">
+              {projects.length}
+            </div>
             <div className="text-sm text-gray-600">Total Projects</div>
           </div>
         </Card>
         <Card className="p-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600">
-              {projects.filter(p => p.isactive === true).length}
+              {projects.filter((p) => p.isactive === true).length}
             </div>
             <div className="text-sm text-gray-600">Active Projects</div>
           </div>
@@ -255,14 +346,16 @@ export default function Projects() {
         <Card className="p-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-orange-600">
-              {projects.filter(p => !p.location_shotname).length}
+              {projects.filter((p) => !p.location_shotname).length}
             </div>
             <div className="text-sm text-gray-600">Pending Location</div>
           </div>
         </Card>
         <Card className="p-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{entities.length}</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {entities.length}
+            </div>
             <div className="text-sm text-gray-600">Entities</div>
           </div>
         </Card>
@@ -278,27 +371,27 @@ export default function Projects() {
       <AssignLocationModal
         project={selectedProject}
         isOpen={locationModalOpen}
-         GOOGLE_MAPS_API_KEY="AIzaSyB41DRUbKWJHPxaFjMAwdrzWzbVKartNGg"
+        GOOGLE_MAPS_API_KEY="AIzaSyB41DRUbKWJHPxaFjMAwdrzWzbVKartNGg"
         onClose={() => setLocationModalOpen(false)}
         onSave={handleLocationSave}
       />
 
-     {/*  <ImportProjectsModal
+      <ImportProjectsModal
         isOpen={importModalOpen}
         onClose={() => setImportModalOpen(false)}
         onImport={handleImportProjects}
       />
 
-      <TanseeqProjectsImportModal
+      {/* <TanseeqProjectsImportModal
         isOpen={tanseeqImportModalOpen}
         onClose={() => setTanseeqImportModalOpen(false)}
         onImport={handleImportProjects}
       /> */}
-      <DeleteProjectDialog 
-            item={deleteProject}
-            onCancel={() => setDeleteProject(null)}
-            onConfirm={confirmDelete}
-          />
+      <DeleteProjectDialog
+        item={deleteProject}
+        onCancel={() => setDeleteProject(null)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

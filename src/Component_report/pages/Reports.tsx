@@ -1,24 +1,23 @@
-
 import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Calendar, Users, Clock, AlertTriangle, UserX, UserCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Download,
+  FileText,
+  Calendar as CalendarIcon,
+  Users,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Loader2, // Added Loader2 for loading states
+} from "lucide-react";
 import { ReportFilters } from "@/components/reports/ReportFilters";
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-
-
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -27,420 +26,534 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { toast } from "@/hooks/use-toast";
 import axios from "axios";
-import { BASEURL } from "../../app";
-import { TOKEN } from "../../app";
-
-// Mock data with authentic Muslim names and role-specific attendance
-
-
-const statusOptions = [
-  { value: "all", label: "All Status" },
-  { value: "Present", label: "Present" },
-  { value: "Absent", label: "Absent" },
-  { value: "Sick Leave", label: "Sick Leave" },
-  { value: "Casual Leave", label: "Casual Leave" },
-  { value: "Present (Visa/ID)", label: "Present (Visa/ID)" },
-  { value: "Exception", label: "Exception" }
-];
-
-// Define which reports are role-specific and should have simplified interface
-const roleSpecificReports = ["medical", "campboss", "ueo"];
-
-// Helper function to determine if project/reason should be hidden
-const shouldHideProjectReason = (status: string, markedBy: string) => {
-  const hiddenStatuses = ["Sick Leave", "Casual Leave", "ID/Visa Verified", "Absent"];
-  const hiddenMarkedBy = ["Medical Officer", "Camp Boss", "United Emirates Officer", "System"];
-  
-  return hiddenStatuses.includes(status) && hiddenMarkedBy.includes(markedBy);
-};
-
-// Helper function to get display value for project/reason
-const getDisplayValue = (originalValue: string, status: string, markedBy: string, isManualReason: boolean = false) => {
-  if (shouldHideProjectReason(status, markedBy)) {
-    // For reason field, show manual entries but hide auto-generated ones
-    if (isManualReason && originalValue && !["Regular Work", "No attendance recorded", "Document verification", "Visa renewal process"].includes(originalValue)) {
-      return originalValue;
-    }
-    return "–";
-  }
-  return originalValue;
-};
+import { BASEURL, TOKEN } from "../../app";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const Reports = () => {
-  const isMobile = useIsMobile();
-  const [selectedReport, setSelectedReport] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  
-  // Report filter states to match ReportFilters component interface
+  const [data, setData] = useState<any[]>([]);
+  const [startDate, setStartDate] = useState("");
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailData, setDetailData] = useState([]);
+  const [selectedRow, setSelectedRow] = useState(null);
+
+  // New state to handle loading during heavy exports
+  const [isExporting, setIsExporting] = useState(false);
+
   const [entityFilter, setEntityFilter] = useState("all");
-  const [classificationFilter, setClassificationFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [classificationFilter, setClassificationFilter] = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
-  const [attendaceTypeFilter, setAttendanceTypeFilter] = useState("all");
-  const [entryMethodFilter, setEntryMethodFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchName, setSearchName] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [mockAttendanceData,setAttendaceData] = useState([]);
 
-  // Check if current report is role-specific
-  const isRoleSpecificReport = roleSpecificReports.includes(selectedReport);
+  const handleViewDetails = async (row: any) => {
+    try {
+      setSelectedRow(row);
 
-  const loadAttendaceData = ()=>{
-    axios.post(BASEURL+'web_reports',{},{
-      headers:{
-        'Content-Type':'multipart/form-data',
-        'Authorization':`Bearer ${TOKEN()}`
-      }
-    }).then(response=>{
-      let reports = response.data.data;
-      setAttendaceData(reports);
-    });
-  }
+      const response = await axios.post(
+        BASEURL + "web_report_day_details",
+        {
+          emp_id: row.emp_id,
+          date: row.date,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${TOKEN()}`,
+          },
+        },
+      );
 
-  // Set smart defaults based on report type
+      setDetailData(response.data.data.data);
+      setDetailModalOpen(true);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const loadData = async () => {
+    try {
+      const response = await axios.post(
+        BASEURL + "web_reports",
+        {
+          date: startDate || new Date().toISOString().split("T")[0],
+          page,
+          limit: 100,
+          entity: entityFilter,
+          category: categoryFilter,
+          classification: classificationFilter,
+          project: projectFilter,
+          search_emp: searchTerm,
+          search_name: searchName,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${TOKEN()}`,
+          },
+        },
+      );
+      const apiData = response.data.data;
+      setData(apiData.data);
+      setLastPage(apiData.last_page);
+      setTotal(apiData.total);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
-    loadAttendaceData();
-  }, [selectedReport]);
-
-  // Filter data based on selected report type and status
-  const getFilteredData = () => {
-    let filtered = [...mockAttendanceData];
-
-    // Filter by status
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(record => record.status === statusFilter);
-    }
-    // Filter by search term if provided
-    if (startDate ) {
-        const start = new Date(startDate).setHours(0,0,0,0); // reset time to midnight
-      filtered = filtered.filter(record => {
-        const recordDate = new Date(record.date).setHours(0,0,0,0);
-        return recordDate === start;
-      });
-    }
-    if(attendaceTypeFilter){
-      filtered = filtered.filter(record =>{
-        return attendaceTypeFilter == 'all' || record.attendance_type == attendaceTypeFilter;
-      })
-    }
-    if(entityFilter){
-      filtered = filtered.filter(record => {
-        return entityFilter === "all" || record.entity.id === entityFilter;
-      });
-    }
-    if(classificationFilter){
-      filtered = filtered.filter(record => {
-        return classificationFilter === "all" || record.classification.code === classificationFilter;
-      });
-    }
-    if(categoryFilter){
-      filtered = filtered.filter(record => {
-        return categoryFilter === "all" || record.category.code === categoryFilter;
-      });
-    }
-    if(projectFilter){
-      filtered = filtered.filter(record => {
-        return projectFilter === "all" || record.project.id === projectFilter;
-      });
-    }
-    if (searchTerm) {
-      //alert('id');
-       filtered = filtered.filter((record) =>{
-        //alert(record.user_login.emp_id);
-        //alert(searchTerm);
-        const searchMatch = record.user_login.emp_id.toLowerCase().includes(searchTerm.toLowerCase());
-        return searchMatch;
-       } 
-      
-       
-      ); 
-    }
-    if (searchName) {
-       filtered = filtered.filter((record) =>{
-        const searchMatch = record.user.name.toLowerCase().includes(searchName.toLowerCase());
-        return searchMatch;
-       } 
-      
-       
-      ); 
-    }
-
-    return filtered;
-  };
-
-  const filteredData = getFilteredData();
-
-  const totalWorkedHours = filteredData.reduce((sum, record) => {
-  // handle cases like "7.5", "08:30", or null
-  if (!record.worked_hours) return sum;
-
-  let hours = 0;
-  // If worked_hours is in "HH:MM" format
-  if (typeof record.worked_hours === "string" && record.worked_hours.includes(":")) {
-    const [h, m] = record.worked_hours.split(":").map(Number);
-    hours = (h*60) + m;
-
-  } else {
-    // otherwise assume numeric or string number
-    hours = parseFloat(record.worked_hours) || 0;
-  }
-  return sum + hours;
-}, 0);
-
-  const handleExportReport = () => {
-   /*  const reportName = reportTypes.find(type => type.value === selectedReport)?.label || "Report";
-    toast({
-      title: "Export Started",
-      description: `${reportName} is being exported to Excel format.`,
-    }); */
-    const exportData = filteredData.map((record) => ({
-      "Employee ID": record.user_login.emp_id,
-      "Name": record.user.name,
-      "Entity": record.entity.entityname,
-      "Classification": record.classification.description,
-      "Category": record.category.description,
-      "Project": record.project.projectname || "",
-      "Date": record.date,
-      "Check In": record.checkin || "N/A",
-      "Check Out": record.checkout || "N/A",
-      "Working Hours": record.worked_hours || "N/A",
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
-
-    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-    const fileData = new Blob([excelBuffer], { type: "application/octet-stream" });
-
-    saveAs(fileData, `Attendance_Report_${new Date().toISOString().split("T")[0]}.xlsx`);
-
-    toast({
-      title: "Export Successful",
-      description: "The report has been downloaded as an Excel file.",
-    });
-  };
-
-  const handleExportPDF = () => {
-  const doc = new jsPDF({
-    orientation: "landscape",
-    unit: "pt",
-    format: "A4",
-  });
-
-  // Add a title
-  doc.setFontSize(16);
-  doc.text("Employee Attendance Report", 40, 40);
-
-  // Prepare table headers
-  const headers = [
-    ["Employee ID", "Name", "Entity", "Classification", "Category", "Project", "Date", "Check In", "Check Out", "Worked Hours"],
-  ];
-
-  // Prepare table rows
-  const data = filteredData.map((record) => [
-    record.user_login.emp_id,
-    record.user.name,
-    record.entity.entityname,
-    record.classification.description,
-    record.category.description,
-    record.project.projectname || "",
-    record.date,
-    record.checkin || "N/A",
-    record.checkout || "N/A",
-    record.worked_hours || "N/A",
+    setPage(1);
+  }, [
+    entityFilter,
+    categoryFilter,
+    classificationFilter,
+    projectFilter,
+    searchTerm,
+    searchName,
+    startDate,
   ]);
 
-  // Add table
-  autoTable(doc, {
-  startY: 60,
-  head: headers,
-  body: data,
-  styles: { fontSize: 8, cellPadding: 4 },
-  headStyles: { fillColor: [46, 125, 50] },
-  alternateRowStyles: { fillColor: [240, 255, 240] },
-});
+  useEffect(() => {
+    loadData();
+  }, [
+    page,
+    entityFilter,
+    categoryFilter,
+    classificationFilter,
+    projectFilter,
+    searchTerm,
+    searchName,
+    startDate,
+  ]);
 
-  // Add totals at the bottom
-  const finalY = doc.lastAutoTable.finalY + 30;
-  doc.setFontSize(12);
-  doc.text(`Total Employees: ${filteredData.length}`, 40, finalY);
-  doc.text(`Total Hours: ${totalWorkedHours.toFixed(2)}`, 200, finalY);
+  const totalMinutes = data.reduce((sum, r) => {
+    if (!r.worked_hours) return sum;
+    const parts = r.worked_hours.split(":");
+    if (parts.length >= 2) {
+      return sum + parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    }
+    return sum;
+  }, 0);
 
-  // Save file
-  doc.save(`Attendance_Report_${new Date().toISOString().split("T")[0]}.pdf`);
-};
+  const totalHours = Math.floor(totalMinutes / 60);
+  const totalMins = totalMinutes % 60;
 
+  // --- NEW: Helper function to fetch all data for export ---
+  const fetchAllDataForExport = async () => {
+    try {
+      const response = await axios.post(
+        BASEURL + "web_reports",
+        {
+          date: startDate || new Date().toISOString().split("T")[0],
+          page: 1,
+          limit: total > 0 ? total : 20000, // Pass the total count to get everything at once
+          entity: entityFilter,
+          category: categoryFilter,
+          classification: classificationFilter,
+          project: projectFilter,
+          search_emp: searchTerm,
+          search_name: searchName,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${TOKEN()}`,
+          },
+        },
+      );
+      return response.data.data.data;
+    } catch (error) {
+      console.error("Failed to fetch export data", error);
+      return [];
+    }
+  };
+
+  // --- UPDATED: Export functions now fetch all data first ---
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    const allData = await fetchAllDataForExport();
+
+    if (allData.length > 0) {
+      // Map the raw data to format the Excel columns and map login_emp_id
+      const formattedData = allData.map((r: any) => ({
+        "Emp ID": r.login_emp_id || "",
+        Name: r.employee_name || "",
+        Entity: r.entityname || "",
+        Category: r.category || "",
+        Classification: r.classification || "",
+        Project: r.projectname || "",
+        Date: r.date || "",
+        "Check In": r.checkin || "",
+        "Check Out": r.checkout || "",
+        Hours: r.worked_hours || "",
+        Status: r.status || "",
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(formattedData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Report");
+      const buffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      saveAs(
+        new Blob([buffer]),
+        `Attendance_${new Date().toISOString().split("T")[0]}.xlsx`,
+      );
+    }
+    setIsExporting(false);
+  };
+
+  const handleExportPDF = async () => {
+    setIsExporting(true);
+    const allData = await fetchAllDataForExport();
+
+    if (allData.length > 0) {
+      const doc = new jsPDF({ orientation: "landscape" });
+      doc.text("Employee Attendance Report", 40, 40);
+      autoTable(doc, {
+        startY: 60,
+        head: [
+          [
+            "Emp ID",
+            "Name",
+            "Entity",
+            "Category",
+            "Classification",
+            "Project",
+            "Date",
+            "CheckIn",
+            "CheckOut",
+            "Hours",
+            "Status",
+          ],
+        ],
+        body: allData.map((r: any) => [
+          r.login_emp_id || "",
+          r.employee_name || "",
+          r.entityname || "",
+          r.category || "",
+          r.classification || "",
+          r.projectname || "",
+          r.date || "",
+          r.checkin || "",
+          r.checkout || "",
+          r.worked_hours || "",
+          r.status || "",
+        ]),
+        styles: { fontSize: 8 },
+      });
+      doc.save(`Attendance_${new Date().toISOString().split("T")[0]}.pdf`);
+    }
+    setIsExporting(false);
+  };
+
+  const getStatusStyle = (status: string) => {
+    const s = status?.toLowerCase() || "";
+    if (s.includes("present") || s.includes("check"))
+      return "bg-green-100 text-green-700 border-green-200";
+    if (s.includes("absent") || s.includes("leave"))
+      return "bg-red-100 text-red-700 border-red-200";
+    if (s.includes("holiday") || s.includes("week"))
+      return "bg-blue-100 text-blue-700 border-blue-200";
+    return "bg-gray-100 text-gray-700 border-gray-200";
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">Employee Attendance Report</h1>
-        <div className="flex flex-end gap-2">
-          <Button onClick={handleExportReport} className="flex items-center gap-2">
-            <Download className="h-4 w-4" />
-            Export to CSV
-          </Button>
+    <>
+      <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              Attendance Details - {selectedRow?.employee_name}
+            </DialogTitle>
+          </DialogHeader>
 
-          <Button onClick={handleExportPDF} variant="outline" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Export PDF
-          </Button>
-      </div>
-      </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>#</TableHead>
+                  <TableHead>Check In</TableHead>
+                  <TableHead>Check Out</TableHead>
+                  <TableHead>Project</TableHead>
+                  <TableHead>Created At</TableHead>
+                </TableRow>
+              </TableHeader>
 
-      {/* Report Type Selection and Filters */}
-      <Card className="p-4">
-        <div className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-4">
-          
-            {/* Status filter - only show for role-specific reports */}
-            {isRoleSpecificReport && (
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Status
-                </label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+              <TableBody>
+                {detailData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      No records found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  detailData.map((item: any, index: number) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>{item.checkin || "-"}</TableCell>
+                      <TableCell>{item.checkout || "-"}</TableCell>
+                      <TableCell>{item.project_id || "-"}</TableCell>
+                      <TableCell>{item.created_at}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <div className="p-6 space-y-8 bg-muted/10 min-h-screen">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Attendance Reports
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage and export detailed employee attendance records.
+            </p>
           </div>
 
-          {/* Additional Filters - only show for non-role-specific reports */}
-          {!isRoleSpecificReport && (
+          <div className="flex items-center gap-3">
+            {/* UPDATED: Buttons disable and show a spinner while exporting */}
+            <Button
+              variant="outline"
+              className="border-green-600 text-green-700 hover:bg-green-50 disabled:opacity-50"
+              onClick={handleExportExcel}
+              disabled={isExporting}
+            >
+              {isExporting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Export Excel
+            </Button>
+
+            <Button
+              variant="outline"
+              className="border-red-600 text-red-700 hover:bg-red-50 disabled:opacity-50"
+              onClick={handleExportPDF}
+              disabled={isExporting}
+            >
+              {isExporting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4 mr-2" />
+              )}
+              Export PDF
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Employees
+              </CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{total}</div>
+              <p className="text-xs text-muted-foreground">
+                Records found based on filters
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {totalHours}h{" "}
+                <span className="text-lg text-muted-foreground font-normal">
+                  {totalMins}m
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Cumulative worked time
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Date Selected
+              </CardTitle>
+              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{startDate || "Today"}</div>
+              <p className="text-xs text-muted-foreground">Reporting period</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="border shadow-sm">
+          <CardHeader className="pb-3 border-b bg-muted/5">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Search className="w-4 h-4" /> Filter Records
+            </CardTitle>
+          </CardHeader>
+          <div className="p-4">
             <ReportFilters
-              entityFilter={entityFilter}
-              setEntityFilter={setEntityFilter}
-              classificationFilter={classificationFilter}
-              setClassificationFilter={setClassificationFilter}
-              categoryFilter={categoryFilter}
-              setCategoryFilter={setCategoryFilter}
-              projectFilter={projectFilter}
-              setProjectFilter={setProjectFilter}
-              entryMethodFilter={entryMethodFilter}
-              setEntryMethodFilter={setEntryMethodFilter}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              searchName ={searchName}
-              setSearchName ={setSearchName}
               startDate={startDate}
               setStartDate={setStartDate}
-              endDate={endDate}
-              setEndDate={setEndDate}
-              setAttendanceTypeFilter={setAttendanceTypeFilter}
+              entityFilter={entityFilter}
+              setEntityFilter={setEntityFilter}
+              categoryFilter={categoryFilter}
+              setCategoryFilter={setCategoryFilter}
+              classificationFilter={classificationFilter}
+              setClassificationFilter={setClassificationFilter}
+              projectFilter={projectFilter}
+              setProjectFilter={setProjectFilter}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              searchName={searchName}
+              setSearchName={setSearchName}
             />
-          )}
-        </div>
-      </Card>
-
-      {/* Report Results */}
-      <Card className="p-0 overflow-hidden">
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center gap-3 flex-wrap">
-    {/* Total Employees */}
-    <div className="flex items-center gap-2 rounded-md border border-green-300 bg-green-50 px-3 py-2 text-green-700 text-sm font-medium">
-      <Users className="h-4 w-4" />
-      <span>Total Employees:</span>
-      <span className="font-semibold">{[...new Set(filteredData.map(record => record.user_login.emp_id))].length}</span>
-    </div>
-
-    {/* Total Hours */}
-    <div className="flex items-center gap-2 rounded-md border border-green-300 bg-green-50 px-3 py-2 text-green-700 text-sm font-medium">
-      <Calendar className="h-4 w-4" />
-      <span>Total Hours:</span>
-      {(() => {
-        const hours = Math.floor(totalWorkedHours / 60);
-        const minutes = Math.round(totalWorkedHours % 60);
-        return (
-          <span className="font-semibold">
-            {hours}h {minutes}m
-          </span>
-        );
-      })()}
-    </div>
-  </div>
-        </div>
-
-        {isMobile ? (
-          <div className="divide-y divide-gray-200">
-            {filteredData.map((record,index) => (
-              <div key={index} className="p-4 space-y-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-medium text-gray-900">{record.user.name}</h3>
-                    <p className="text-sm text-gray-500">{record.user_login.emp_id}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <span className="font-medium">Date:</span> {record.date}
-                  </div>
-                  <div>
-                    <span className="font-medium">Check In:</span> {record.checkin || "N/A"}
-                  </div>
-                  <div>
-                    <span className="font-medium">Check Out:</span> {record.checkout || "N/A"}
-                  </div>
-                 
-                </div>
-              </div>
-            ))}
           </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>PROJECT</TableHead>
-                <TableHead>EMPLOYEE ID</TableHead>
-                <TableHead>EMPLOYEE NAME</TableHead>
-                <TableHead>CATEGORY</TableHead>
-                <TableHead>CLASSIFICATION</TableHead>
-                <TableHead>ATTENDANCE TYPE</TableHead>
-                <TableHead>CHECK-IN</TableHead>
-                <TableHead>CHECK-OUT</TableHead>
-                <TableHead>Hours</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredData.map((record) => (
-                <TableRow key={record.id}>
-                  <TableCell>{record.project.projectname ? ` ${record.project.projectname}` : "" }</TableCell>
-                  <TableCell className="font-medium">{record.user_login.emp_id}</TableCell>
-                  <TableCell>{record.user.name}</TableCell>
-                  <TableCell>{record.category.description}</TableCell>
-                  <TableCell>{record.classification.description}</TableCell>
-                  <TableCell>{record.attendance_type}</TableCell>
-                  <TableCell>{record.date} {record.checkin }</TableCell>
-                  <TableCell>{record.checkout ? `${record.date} ${record.checkout}` : ""}</TableCell>
-                  <TableCell>{record.worked_hours }</TableCell>
+        </Card>
+
+        <Card className="border shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-muted/40">
+                <TableRow>
+                  <TableHead className="w-[100px]">Emp ID</TableHead>
+                  <TableHead className="min-w-[150px]">Employee</TableHead>
+                  <TableHead className="min-w-[120px]">Project</TableHead>
+                  <TableHead className="min-w-[120px]">Entity</TableHead>
+                  <TableHead className="min-w-[100px]">Category</TableHead>
+                  <TableHead>Classification</TableHead>
+                  <TableHead className="w-[120px]">Date</TableHead>
+                  <TableHead className="text-right">Check In</TableHead>
+                  <TableHead className="text-right">Check Out</TableHead>
+                  <TableHead className="text-right">Duration</TableHead>
+                  <TableHead className="text-center w-[120px]">
+                    Status
+                  </TableHead>
+                  <TableHead className="text-center">Action</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+              </TableHeader>
 
-        {filteredData.length === 0 && (
-          <div className="p-8 text-center text-gray-500">
-            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No records found for the selected filters</p>
+              <TableBody>
+                {data.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={11}
+                      className="h-32 text-center text-muted-foreground"
+                    >
+                      No records found for the selected criteria.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  data.map((r, i) => (
+                    <TableRow
+                      key={`${r.login_emp_id}-${i}`}
+                      className="hover:bg-muted/5 transition-colors"
+                    >
+                      <TableCell className="text-xs font-medium text-muted-foreground">
+                        {r.login_emp_id || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium text-gray-900">
+                          {r.employee_name || "Unknown"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-gray-700">
+                          {r.projectname || "—"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-muted-foreground">
+                          {r.entityname || "—"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-muted-foreground">
+                          {r.category || "—"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {r.classification || "—"}
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">
+                        {r.date || "—"}
+                      </TableCell>
+                      <TableCell className="text-right text-sm text-green-700">
+                        {r.checkin || "—"}
+                      </TableCell>
+                      <TableCell className="text-right text-sm text-red-700">
+                        {r.checkout || "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-sm">
+                        {r.worked_hours || "00:00"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusStyle(r.status)}`}
+                        >
+                          {r.status || "Absent"}
+                        </span>
+                      </TableCell>
+
+                      <TableCell className="text-center">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewDetails(r)}
+                        >
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
-        )}
-      </Card>
-    </div>
+
+          <div className="flex items-center justify-between border-t p-4 bg-muted/5">
+            <div className="text-sm text-muted-foreground">
+              Showing page{" "}
+              <span className="font-medium text-foreground">{page}</span> of{" "}
+              <span className="font-medium text-foreground">{lastPage}</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 1}
+                onClick={() => setPage(page - 1)}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === lastPage}
+                onClick={() => setPage(page + 1)}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </>
   );
 };
 
