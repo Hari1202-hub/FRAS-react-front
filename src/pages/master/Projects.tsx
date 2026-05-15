@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Upload, Eye, Trash, Search } from "lucide-react";
+import { Upload, Eye, Trash, Search, Users } from "lucide-react";
 import ProjectFilters from "./ProjectFilters";
 import ProjectTable from "./ProjectTable";
 import ProjectCardMobile from "./ProjectCardMobile";
@@ -8,6 +8,7 @@ import TanseeqImportModal from "./TanseeqProjectsImportModal";
 import ProjectViewModal from "./ProjectViewModal";
 import DeleteProjectDialog from "./DeleteProjectDialog";
 import AssignLocationModal from "./AssignLocationModal";
+import BulkTimekeeperModal from "./BulkTimekeeperModal";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -123,6 +124,7 @@ export default function ProjectsPage() {
   });
   const [importOpen, setImportOpen] = useState(false);
   const [tanseeqImportOpen, setTanseeqImportOpen] = useState(false);
+  const [bulkTimekeeperOpen, setBulkTimekeeperOpen] = useState(false);
   const [viewProject, setViewProject] = useState(null);
   const [deleteProject, setDeleteProject] = useState(null);
   const [locationProject, setLocationProject] = useState(null);
@@ -242,6 +244,13 @@ export default function ProjectsPage() {
         </h1>
         <div className="flex flex-col md:flex-row gap-3">
           <Button
+            variant="outline"
+            className="border-proscape text-proscape hover:bg-proscape/5 font-medium flex gap-2"
+            onClick={() => setBulkTimekeeperOpen(true)}
+          >
+            <Users className="w-4 h-4" /> Bulk Assign Timekeeper
+          </Button>
+          <Button
             className="bg-proscape hover:bg-proscape-dark text-white font-medium flex gap-2"
             onClick={() => setTanseeqImportOpen(true)}
           >
@@ -307,6 +316,10 @@ export default function ProjectsPage() {
         open={!!locationProject}
         onOpenChange={(open) => !open && setLocationProject(null)}
         onSave={handleAssignLocation}
+      />
+      <BulkTimekeeperModal
+        open={bulkTimekeeperOpen}
+        onOpenChange={setBulkTimekeeperOpen}
       />
     </div>
   );

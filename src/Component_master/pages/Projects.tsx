@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Search, Filter, Grid, List } from "lucide-react";
+import { Plus, Search, Filter, Grid, List, Users } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ProjectTable from "../components/ProjectTable";
 import ProjectCardMobile from "../components/ProjectCardMobile";
@@ -9,6 +9,7 @@ import ProjectViewModal from "../components/ProjectViewModal";
 import AssignLocationModal from "../components/AssignLocationModal";
 import ImportProjectsModal from "../components/ImportProjectsModal";
 import TanseeqProjectsImportModal from "../components/TanseeqProjectsImportModal";
+import BulkTimekeeperModal from "../../pages/master/BulkTimekeeperModal";
 import axios from "axios";
 import { BASEURL } from "../../app";
 import { TOKEN } from "../../app";
@@ -26,6 +27,7 @@ export default function Projects() {
   const [locationModalOpen, setLocationModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [tanseeqImportModalOpen, setTanseeqImportModalOpen] = useState(false);
+  const [bulkTimekeeperOpen, setBulkTimekeeperOpen] = useState(false);
   const [deleteProject, setDeleteProject] = useState(null);
   const [entities, setEntities] = useState([]);
 
@@ -214,7 +216,14 @@ export default function Projects() {
             Manage and track all project information
           </p>
         </div>
-        <div className="importExport-btn">
+        <div className="importExport-btn flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setBulkTimekeeperOpen(true)}
+            className="border-proscape text-proscape hover:bg-proscape/5 flex gap-2"
+          >
+            <Users className="w-4 h-4" /> Bulk Assign Timekeeper
+          </Button>
           <Button
             onClick={() => setImportModalOpen(true)}
             className="bg-proscape text-white"
@@ -391,6 +400,10 @@ export default function Projects() {
         item={deleteProject}
         onCancel={() => setDeleteProject(null)}
         onConfirm={confirmDelete}
+      />
+      <BulkTimekeeperModal
+        open={bulkTimekeeperOpen}
+        onOpenChange={setBulkTimekeeperOpen}
       />
     </div>
   );
