@@ -1,9 +1,8 @@
 
-import { useState,useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { Eye, Search, Filter, CloudDownload } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Eye, Search, Filter } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -11,145 +10,89 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-import EmployeeActionsCell from "../../components/EmployeeActionsCell";
 import FaceEnrollmentModal from "../../components/FaceEnrollmentModal";
 import { EmployeeDetailModal } from "@/components/employees/EmployeeDetailModal";
 import axios from "axios";
-import { BASEURL } from "../../../app";
-import { TOKEN } from "../../../app";
+import { BASEURL, TOKEN } from "../../../app";
 
+const PER_PAGE = 25;
 
 const AllEmployees = () => {
   const [employees, setEmployees] = useState([]);
-  const [lastpage, setLastPage] = useState(1);
+  const [meta, setMeta] = useState({ total: 0, last_page: 1, current_page: 1 });
   const [entities, setEntities] = useState([]);
   const [categories, setCategories] = useState([]);
   const [classifications, setClassifications] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [enrolledFilter, setEnrolledFilter] = useState("all");
+  const [enrolledFilter, setEnrolledFilter] = useState("");
   const [entityFilter, setEntityFilter] = useState("all");
   const [classificationFilter, setClassificationFilter] = useState("all");
-  const [roleFilter, setRoleFilter] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const navigate = useNavigate();
-  const [isTanseeqModalOpen, setIsTanseeqModalOpen] = useState(false);
   const [isFaceModalOpen, setIsFaceModalOpen] = useState(false);
   const [selectedFaceEmployee, setSelectedFaceEmployee] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [totalPage,setTotalPage] = useState(1);
-  const itemsPerPage = 100; // You can change this to whatever suits
   const [loading, setLoading] = useState(false);
 
-  const loadEmployees = (pageNumber=1) =>{
-    setLoading(true); // start loading
-    const postData = new FormData();
-   // postData.append('assigned_role', 0);
-    postData.append('page', pageNumber);
-    postData.append('length', itemsPerPage);
+  const authHeaders = { Authorization: `Bearer ${TOKEN()}` };
 
-     // Add filters to the request
-    postData.append('search', searchTerm);
-    postData.append('status', statusFilter=='all'?'':statusFilter);
-    postData.append('entrolled', enrolledFilter=='all'?'':enrolledFilter);
-    postData.append('employee', statusFilter=='all'?'':statusFilter);
-    postData.append('category', categoryFilter=='all'?'':categoryFilter);
-    postData.append('entity', entityFilter=='all'?'':entityFilter);
-    postData.append('classification', classificationFilter=='all'?'':classificationFilter);
-    postData.append('roles', roleFilter.join(','));
-    axios.post(BASEURL+'web_employees',postData, {
-      headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${TOKEN()}` }
-    }).then(response=>{
-      console.log(response.data.data.employees);
-        let employees = response.data.data.employees;
-        setEmployees(employees);
-        setTotalPage(response.data.data.total_count);
-        setLastPage(response.data.data.last_page);
-        setLoading(false); // stop loading
-    }).finally(() => {
-      setLoading(false); // stop loading
-    });
-  }
+  const loadEmployees = (page = 1) => {
+    setLoading(true);
+    const params: Record<string, unknown> = { per_page: PER_PAGE, page };
+    if (searchTerm)                        params.search         = searchTerm;
+    if (statusFilter !== "all")            params.status         = statusFilter;
+    if (categoryFilter !== "all")          params.category       = categoryFilter;
+    if (entityFilter !== "all")            params.entity         = entityFilter;
+    if (classificationFilter !== "all")    params.classification = classificationFilter;
+    if (enrolledFilter === "1")            params.enrolled       = 1;
+    else if (enrolledFilter === "2")       params.enrolled       = 0;
 
+    axios.get(`${BASEURL}v2/staff`, { headers: authHeaders, params })
+      .then(res => {
+        setEmployees(res.data.data);
+        setMeta(res.data.meta);
+      })
+      .finally(() => setLoading(false));
+  };
 
-  const filteredEmployees = employees.filter((employee) => {
-    const searchMatch = 
-      employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.user?.emp_id.toLowerCase().includes(searchTerm.toLowerCase());
-    const statusMatch = 
-      statusFilter === "all" || 
-      ((employee.isactive == true && statusFilter==1) || (employee.isactive == false && statusFilter==0));
-    const categoryMatch = 
-      categoryFilter === "all" || 
-      employee.category_code.toLowerCase() === categoryFilter.toLowerCase();
-    const entityMatch = 
-      entityFilter === "all" || 
-      employee.entity_id == entityFilter;
-    const classificationMatch = 
-      classificationFilter === "all" || 
-      employee.classification_code === classificationFilter;
-    const roleMatch = 
-      roleFilter.length === 0 || 
-      employee.roles.some(role => roleFilter.includes(role.roelname));
+  const loadEntities = () =>
+    axios.post(`${BASEURL}entities`, {}, { headers: authHeaders })
+      .then(r => setEntities(r.data.data));
 
-    return searchMatch && statusMatch && categoryMatch && entityMatch && classificationMatch && roleMatch ;
-  });
+  const loadCategories = () =>
+    axios.post(`${BASEURL}categories`, {}, { headers: authHeaders })
+      .then(r => setCategories(r.data.data));
 
-  const [currentPage, setCurrentPage] = useState(1);
+  const loadClassifications = () =>
+    axios.post(`${BASEURL}classifications`, {}, { headers: authHeaders })
+      .then(r => setClassifications(r.data.data));
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, categoryFilter, entityFilter, classificationFilter, enrolledFilter]);
 
+  useEffect(() => {
+    loadEmployees(currentPage);
+  }, [currentPage, searchTerm, statusFilter, categoryFilter, entityFilter, classificationFilter, enrolledFilter]);
+
+  useEffect(() => {
+    loadEntities();
+    loadCategories();
+    loadClassifications();
+  }, []);
 
   const handleEmployeeView = (employee) => {
     setSelectedEmployee(employee);
     setViewModalOpen(true);
   };
 
-  const handleFaceEnrollment = (employee) => {
-    setSelectedFaceEmployee(employee);
-    setIsFaceModalOpen(true);
-  };
+  const start = (currentPage - 1) * PER_PAGE + 1;
+  const end   = Math.min(currentPage * PER_PAGE, meta.total);
 
-  
-
-  const handleRoleFilterChange = (selectedRoles) => {
-    setRoleFilter(selectedRoles);
-  };
-  const loadEntities = ()=>{
-    axios.post(BASEURL+'entities',{},{
-      headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${TOKEN()}` }
-    }).then(response=>{
-      let entities = response.data.data;
-      setEntities(entities);
-    })
-  }
-  const loadCategories = ()=>{
-    axios.post(BASEURL+'categories',{},{
-      headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${TOKEN()}` }
-    }).then(response=>{
-      let categories = response.data.data;
-      setCategories(categories);
-    })
-  }
-  const loadClassifications = ()=>{
-    axios.post(BASEURL+'classifications',{},{
-      headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${TOKEN()}` }
-    }).then(response=>{
-      let classifications = response.data.data;
-      setClassifications(classifications);
-    })
-  }
-  useEffect(()=>{
-    loadEmployees(currentPage);
-    loadEntities();
-    loadCategories();
-    loadClassifications();
-  },[currentPage, searchTerm, statusFilter, categoryFilter, entityFilter, classificationFilter, roleFilter,enrolledFilter])
   return (
     <div className="space-y-6">
-
-      <div className="flex justify-end items-center mb-4">
-      </div>
       <Card className="p-0 overflow-hidden">
         <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="relative flex-1">
@@ -162,9 +105,10 @@ const AllEmployees = () => {
               placeholder="Search by name or employee ID"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-           style={{minWidth:'160px'}} />
+              style={{ minWidth: "160px" }}
+            />
           </div>
-          <div className="flex flex-col md:flex-row gap-4 md:items-center">
+          <div className="flex flex-col md:flex-row gap-4 md:items-center flex-wrap">
             <div className="flex items-center">
               <Filter className="h-5 w-5 text-gray-400 mr-2" />
               <span className="text-sm text-gray-600 mr-2">Status:</span>
@@ -172,23 +116,24 @@ const AllEmployees = () => {
                 className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proscape"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-              style={{width:'100px'}}>
+                style={{ width: "100px" }}
+              >
                 <option value="all">All Status</option>
                 <option value="1">Active</option>
                 <option value="0">Inactive</option>
               </select>
             </div>
-             <div className="flex items-center">
-              <span className="text-sm text-gray-600 mr-2">Employees:</span>
+            <div className="flex items-center">
+              <span className="text-sm text-gray-600 mr-2">Enrolled:</span>
               <select
                 className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proscape"
                 value={enrolledFilter}
                 onChange={(e) => setEnrolledFilter(e.target.value)}
-               style={{width:'100px'}}>
+                style={{ width: "120px" }}
+              >
                 <option value="">All</option>
-                <option value="1">Entrolled Employees</option>
-                <option value="2">Not Entrolled Employees</option>
-                
+                <option value="1">Enrolled</option>
+                <option value="2">Not Enrolled</option>
               </select>
             </div>
             <div className="flex items-center">
@@ -197,11 +142,10 @@ const AllEmployees = () => {
                 className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proscape"
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-              style={{width:'100px'}}>
-                <option value="all">All Categories</option>
-                {categories.map((category, index) => (
-                  <option key={index} value={category.code}>{category.description}</option>
-                ))}
+                style={{ width: "120px" }}
+              >
+                <option value="all">All</option>
+                {categories.map((c, i) => <option key={i} value={c.code}>{c.description}</option>)}
               </select>
             </div>
             <div className="flex items-center">
@@ -210,11 +154,10 @@ const AllEmployees = () => {
                 className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proscape"
                 value={classificationFilter}
                 onChange={(e) => setClassificationFilter(e.target.value)}
-              style={{ maxWidth: '160px' }}>
-                <option value="all">All Classifications</option>
-                {classifications.map((classification, index) => (
-                  <option key={index} value={classification.code}>{classification.description}</option>
-                ))}
+                style={{ maxWidth: "160px" }}
+              >
+                <option value="all">All</option>
+                {classifications.map((c, i) => <option key={i} value={c.code}>{c.description}</option>)}
               </select>
             </div>
             <div className="flex items-center">
@@ -223,15 +166,15 @@ const AllEmployees = () => {
                 className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proscape"
                 value={entityFilter}
                 onChange={(e) => setEntityFilter(e.target.value)}
-              style={{ maxWidth: '100px' }}>
-                <option value="all">All Entities</option>
-                {entities.map((entity, index) => (
-                  <option key={index} value={entity.id}>{entity.entityname}</option>
-                ))}
+                style={{ maxWidth: "120px" }}
+              >
+                <option value="all">All</option>
+                {entities.map((e, i) => <option key={i} value={e.id}>{e.entityname}</option>)}
               </select>
             </div>
           </div>
         </div>
+
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -242,7 +185,8 @@ const AllEmployees = () => {
                 <TableHead>Classification</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Assigned Roles</TableHead>
-                <TableHead>Assigned Projects</TableHead>
+                <TableHead>Assigned Project</TableHead>
+                <TableHead>Enrolled</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -250,82 +194,68 @@ const AllEmployees = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-6 text-gray-500">
+                  <TableCell colSpan={10} className="text-center py-6 text-gray-500">
                     <div className="flex justify-center items-center space-x-2">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></div>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900" />
                       <span>Loading employees...</span>
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : filteredEmployees.length > 0 ? (
-                filteredEmployees.map((employee,empIndex) => (
-                  <TableRow key={empIndex}>
+              ) : employees.length > 0 ? (
+                employees.map((employee, i) => (
+                  <TableRow key={i}>
                     <TableCell className="font-medium">{employee.user?.emp_id}</TableCell>
                     <TableCell>{employee.name}</TableCell>
-                    <TableCell className="max-w-[200px] truncate" title={employee.classifications.name}>
-                      {employee.entities.entityname}
+                    <TableCell className="max-w-[200px] truncate" title={employee.entities?.entityname}>
+                      {employee.entities?.entityname}
                     </TableCell>
-                    <TableCell>{employee.classifications.description}</TableCell>
-                    <TableCell>{employee.categories.description}</TableCell>
+                    <TableCell>{employee.classifications?.description}</TableCell>
+                    <TableCell>{employee.categories?.description}</TableCell>
                     <TableCell>
                       {employee.roles && employee.roles.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
-                          {employee.roles.map((role, index) => (
-                            <Badge key={index} className="bg-green-100 text-green-800 hover:bg-green-200">
+                          {employee.roles.map((role, j) => (
+                            <Badge key={j} className="bg-green-100 text-green-800 hover:bg-green-200">
                               {role.rolename}
                             </Badge>
                           ))}
                         </div>
                       ) : (
-                        <span className="text-sm text-gray-500">No Roles Assigned</span>
+                        <span className="text-sm text-gray-500">No Roles</span>
                       )}
                     </TableCell>
-                    <TableCell>{employee?.project?.projectname}</TableCell>
-
+                    <TableCell>{employee.project?.projectname ?? "—"}</TableCell>
                     <TableCell>
-                      <Badge 
-                        className={
-                          employee.isactive === true 
-                            ? "bg-green-100 text-green-800 hover:bg-green-200" 
-                            : "bg-red-100 text-red-800 hover:bg-red-200"
-                        }
-                      >
-                        {employee.isactive?'Active':'Inactive'}
+                      <Badge className={employee.is_enrolled
+                        ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"}>
+                        {employee.is_enrolled ? "Enrolled" : "Not Enrolled"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={employee.isactive
+                        ? "bg-green-100 text-green-800 hover:bg-green-200"
+                        : "bg-red-100 text-red-800 hover:bg-red-200"}>
+                        {employee.isactive ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end space-x-3">
-                        {/* <EmployeeActionsCell
-                          employee={{
-                            id: employee.emp_id,
-                            name: employee.name,
-                            hasFaceEnrolled: employee.image
-                          }}
-                          onEnrollFace={handleFaceEnrollment}
-                        /> */}
-                        
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button 
-                                onClick={() => handleEmployeeView(employee)}
-                                className="text-blue-500 hover:text-blue-700 p-1"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>View Employee Details</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button onClick={() => handleEmployeeView(employee)} className="text-blue-500 hover:text-blue-700 p-1">
+                              <Eye className="h-4 w-4" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>View Employee Details</p></TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-6 text-gray-500">
+                  <TableCell colSpan={10} className="text-center py-6 text-gray-500">
                     No employees found matching the search criteria
                   </TableCell>
                 </TableRow>
@@ -333,33 +263,30 @@ const AllEmployees = () => {
             </TableBody>
           </Table>
         </div>
-        
+
         <div className="px-4 py-3 flex items-center justify-between border-t border-gray-200 bg-gray-50">
           <div className="text-sm text-gray-700">
-            Showing {totalPage > 0 ?(
-              <>
-              <span className="font-medium">{((currentPage-1)*itemsPerPage)+1} - 
-                {totalPage >= (((currentPage-1)*itemsPerPage)+100)?(<>{((currentPage-1)*itemsPerPage)+100}</> 
-                ):('')}
-                </span> of{" "}
-            <span className="font-medium">{totalPage}</span> employees
-            </>
-            ):(
-              <> 0 employees</>
+            {meta.total > 0 ? (
+              <>Showing <span className="font-medium">{start}–{end}</span> of <span className="font-medium">{meta.total}</span> employees</>
+            ) : (
+              <>0 employees</>
             )}
           </div>
           <div className="flex space-x-2">
-            <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50" onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
-              Previous
-            </button>
-            <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50" onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPage))} disabled={ currentPage === lastpage}>
-              Next 
-            </button>
+            <button
+              className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+            >Previous</button>
+            <button
+              className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              onClick={() => setCurrentPage(p => Math.min(p + 1, meta.last_page))}
+              disabled={currentPage === meta.last_page}
+            >Next</button>
           </div>
         </div>
       </Card>
 
-     
       {selectedFaceEmployee && (
         <FaceEnrollmentModal
           isOpen={isFaceModalOpen}
@@ -369,7 +296,7 @@ const AllEmployees = () => {
           isUpdate={selectedFaceEmployee.hasFaceEnrolled}
         />
       )}
-      
+
       <EmployeeDetailModal
         open={viewModalOpen}
         onOpenChange={setViewModalOpen}

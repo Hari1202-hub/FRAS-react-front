@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import axios from "axios";
 import {
   Dialog,
   DialogContent,
@@ -11,9 +12,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
 
 import { Input } from "@/components/ui/input";
-import { Upload, Loader2, Filter, FileSpreadsheet, X } from "lucide-react";
+import { Upload, Loader2, Filter, FileSpreadsheet, X, FileDown } from "lucide-react";
 import * as XLSX from "xlsx";
 import { cn } from "@/lib/utils"; // Assuming shadcn utility
+import { BASEURL, TOKEN } from "../../app";
 
 interface ImportProjectsModalProps {
   isOpen: boolean;
@@ -48,6 +50,25 @@ export default function ImportProjectsModal({
   }, [isOpen]);
 
   const { toast } = useToast();
+
+  const downloadTemplate = async () => {
+    try {
+      const res = await axios.get(`${BASEURL}v2/templates/projects`, {
+        headers: { Authorization: `Bearer ${TOKEN()}` },
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "projects_import_template.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch {
+      toast({ title: "Failed to download template", variant: "destructive" });
+    }
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -171,40 +192,53 @@ export default function ImportProjectsModal({
         <div className="flex-1 overflow-y-auto p-6 pt-2">
           {!projects ? (
             /* Enhanced Upload Area */
-            <div
-              onClick={() => !isLoading && fileInputRef.current?.click()}
-              className={cn(
-                "group relative border-2 border-dashed rounded-xl p-12 flex flex-col items-center justify-center transition-all duration-200 cursor-pointer",
-                isLoading
-                  ? "bg-gray-50 border-gray-200"
-                  : "hover:border-proscape hover:bg-proscape/5 border-gray-300",
-              )}
-            >
-              <input
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                ref={fileInputRef}
-                className="hidden"
-                onChange={handleFileUpload}
-              />
-
-              <div className="bg-proscape/10 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
-                {isLoading ? (
-                  <Loader2 className="h-8 w-8 text-proscape animate-spin" />
-                ) : (
-                  <Upload className="h-8 w-8 text-proscape" />
+            <div className="space-y-3">
+              <div
+                onClick={() => !isLoading && fileInputRef.current?.click()}
+                className={cn(
+                  "group relative border-2 border-dashed rounded-xl p-12 flex flex-col items-center justify-center transition-all duration-200 cursor-pointer",
+                  isLoading
+                    ? "bg-gray-50 border-gray-200"
+                    : "hover:border-proscape hover:bg-proscape/5 border-gray-300",
                 )}
-              </div>
+              >
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
 
-              <div className="text-center">
-                <p className="text-lg font-medium text-gray-900">
-                  {isLoading
-                    ? "Processing your file..."
-                    : "Click to upload or drag and drop"}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Excel (.xlsx, .xls) or CSV files
-                </p>
+                <div className="bg-proscape/10 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
+                  {isLoading ? (
+                    <Loader2 className="h-8 w-8 text-proscape animate-spin" />
+                  ) : (
+                    <Upload className="h-8 w-8 text-proscape" />
+                  )}
+                </div>
+
+                <div className="text-center">
+                  <p className="text-lg font-medium text-gray-900">
+                    {isLoading
+                      ? "Processing your file..."
+                      : "Click to upload or drag and drop"}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Excel (.xlsx, .xls) or CSV files
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); downloadTemplate(); }}
+                  className="text-proscape border-proscape hover:bg-proscape/10"
+                >
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Download Sample Template
+                </Button>
               </div>
             </div>
           ) : (

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import axios from "axios";
 import {
   Dialog,
   DialogClose,
@@ -7,7 +8,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, X, CloudDownload, Search, Filter } from "lucide-react";
+import { Loader2, X, CloudDownload, Search, Filter, FileDown } from "lucide-react";
+import { BASEURL, TOKEN } from "../../app";
 import { mockTanseeqEmployees } from "./tanseeq-mock-data";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -178,6 +180,25 @@ export function TanseeqImportModal({
     return Array.from(new Set(data.map((item) => String(item[key]))));
   };
 
+  const downloadTemplate = async () => {
+    try {
+      const res = await axios.get(`${BASEURL}v2/templates/employees`, {
+        headers: { Authorization: `Bearer ${TOKEN()}` },
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "employees_import_template.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch {
+      toast({ title: "Failed to download template", variant: "destructive" });
+    }
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -326,7 +347,7 @@ export function TanseeqImportModal({
           </div>
 
           {!fetchedEmployees && (
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-3">
               <input
                 type="file"
                 accept=".xlsx,.xls,.csv"
@@ -334,11 +355,6 @@ export function TanseeqImportModal({
                 className="hidden"
                 onChange={handleFileUpload}
               />
-              {/* <Button
-                onClick={handleFetch}
-                disabled={isLoading}
-                className='bg-proscape hover:bg-proscape-dark'
-              > */}
               <Button
                 onClick={() => document.getElementById("excelUpload")?.click()}
                 className="bg-proscape hover:bg-proscape-dark"
@@ -351,9 +367,18 @@ export function TanseeqImportModal({
                 ) : (
                   <>
                     <CloudDownload className="mr-2 h-4 w-4" />
-                    Upload CSV file
+                    Upload Excel / CSV File
                   </>
                 )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={downloadTemplate}
+                className="text-proscape border-proscape hover:bg-proscape/10"
+              >
+                <FileDown className="mr-2 h-4 w-4" />
+                Download Sample Template
               </Button>
             </div>
           )}

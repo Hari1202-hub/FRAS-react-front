@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, Settings, Users, Calendar, FileText, User, ChevronDown, ChevronRight, ChevronLeft, Briefcase, CheckCircle, Tag, Menu, X, LogOut, Clock, UserCog } from "lucide-react";
+import { Home, Settings, Users, Calendar, FileText, User, ChevronDown, ChevronRight, ChevronLeft, Briefcase, CheckCircle, Tag, Menu, X, LogOut, Clock, UserCog, ScanFace } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -90,11 +90,24 @@ const menuItems: MenuItem[] = [{
   hidden: true,
  
 }, {
-  name: "Attendance Reports",
+  name: "Reports",
   path: "/reports",
   icon: <FileText className="h-5 w-5" />,
   requiredPermission: "View Reports",
- 
+  subMenus: [
+    {
+      name: "Attendance Report",
+      path: "/reports",
+      icon: <FileText className="h-4 w-4" />,
+      requiredPermission: "View Reports",
+    },
+    {
+      name: "Facial Recognition",
+      path: "/reports/facial-recognition",
+      icon: <ScanFace className="h-4 w-4" />,
+      requiredPermission: "View Reports",
+    },
+  ],
 }, {
   name: "Profile",
   path: "/profile",
@@ -105,7 +118,12 @@ const menuItems: MenuItem[] = [{
 export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [expanded, setExpanded] = useState<string | null>("Master");
+  const getInitialExpanded = (path: string): string | null => {
+    if (path.startsWith("/reports")) return "Reports";
+    if (path.startsWith("/master"))  return "Master";
+    return "Master";
+  };
+  const [expanded, setExpanded] = useState<string | null>(() => getInitialExpanded(location.pathname));
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();

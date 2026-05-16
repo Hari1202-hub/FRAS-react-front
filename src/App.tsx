@@ -27,6 +27,7 @@ import RoleAttendanceLogic from "./Component_master/pages/RoleAttendanceLogic";
 
 // Reports microservice imports
 import Reports from "./Component_report/pages/Reports";
+import FacialRecognitionReport from "./Component_report/pages/FacialRecognitionReport";
 
 import NotFound from "./pages/NotFound";
 import { BASENAME } from "./app";
@@ -63,6 +64,11 @@ const App = () => {
             <Route path="/reports" element={
               <PermissionGuard requiredPermission="View Reports">
                 <Layout><Reports /></Layout>
+              </PermissionGuard>
+            } />
+            <Route path="/reports/facial-recognition" element={
+              <PermissionGuard requiredPermission="View Reports">
+                <Layout><FacialRecognitionReport /></Layout>
               </PermissionGuard>
             } />
             <Route path="/profile" element={<Layout><Profile /></Layout>} />

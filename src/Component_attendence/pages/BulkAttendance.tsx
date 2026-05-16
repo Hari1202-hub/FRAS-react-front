@@ -253,39 +253,28 @@ const BulkAttendance = () => {
     setShowNoSelectionDialog(false);
   };
   
-  // Generate and download template
-  const downloadTemplate = () => {
-    // Create a table structure that can be used as a template
-    const headers = ["Employee_ID",  "Project_ID", "Date_dd_mm_yyyy", "Check_In_24hours_format", "Check_Out_24hours_format","Attendance_Type"];
-    
-    const sampleRows = [
-      ["TAN0001","PSE20251013", "29-08-2024", "10:00", "22:20","Regular"]
-    ];
-    
-    // Create CSV content
-    let csvContent = headers.join(",") + "\n";
-    sampleRows.forEach(row => {
-      csvContent += row.join(",") + "\n";
-    });
-    
-    // Create a blob and download it
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'bulk_attendance_template.csv';
-    document.body.appendChild(a);
-    a.click();
-    
-    // Cleanup
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-    
-    // Show success toast
-    toast({
-      title: "Template Downloaded",
-      description: "You can fill this template and import it back to mark attendance.",
-    });
+  // Generate and download template from backend
+  const downloadTemplate = async () => {
+    try {
+      const res = await axios.get(`${BASEURL}v2/templates/attendance`, {
+        headers: { Authorization: `Bearer ${TOKEN()}` },
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "text/csv" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "bulk_attendance_template.csv";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast({
+        title: "Template Downloaded",
+        description: "Fill in the template and upload it to mark attendance.",
+      });
+    } catch {
+      toast({ title: "Failed to download template", variant: "destructive" });
+    }
   };
 
   // If in import mode, show the import view
