@@ -21,7 +21,7 @@ import {
 import {
   Download, FileText, Users, Clock, CalendarRange,
   ChevronLeft, ChevronRight, Eye, Loader2, MapPin,
-  LogIn, LogOut, ArrowLeftRight,
+  LogIn, LogOut, ArrowLeftRight, BarChart2,
 } from "lucide-react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -417,7 +417,61 @@ const Reports = () => {
           ) : viewData.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No records found for this date.</p>
           ) : (
-            <div className="space-y-4">
+            <>
+              {/* Overview strip */}
+              {(() => {
+                const parseSeconds = (s: string | null) => {
+                  if (!s) return 0;
+                  const p = s.split(':').map(Number);
+                  return (p[0] || 0) * 3600 + (p[1] || 0) * 60 + (p[2] || 0);
+                };
+                const totalSecs       = viewData.reduce((acc, r) => acc + parseSeconds(r.worked_hours), 0);
+                const hh              = Math.floor(totalSecs / 3600);
+                const mm              = Math.floor((totalSecs % 3600) / 60);
+                const ss              = totalSecs % 60;
+                const totalDuration   = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+                const checkinCount    = viewData.filter(r => r.checkin  !== null).length;
+                const checkoutCount   = viewData.filter(r => r.checkout !== null).length;
+                const missingCheckouts = viewData.filter(r => r.checkin !== null && r.checkout === null).length;
+                const missingCheckins  = viewData.filter(r => r.checkout !== null && r.checkin === null).length;
+
+                return (
+                  <div className="bg-gradient-to-br from-slate-50 to-blue-50 border border-blue-200 rounded-xl p-4 mb-2">
+                    <h3 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                      <BarChart2 className="h-4 w-4" />
+                      Overview
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      <div className="col-span-2 md:col-span-1 bg-white rounded-lg p-3 border border-blue-100 shadow-sm flex flex-col gap-0.5">
+                        <p className="text-xs font-medium text-blue-500 uppercase tracking-wide">Date Period</p>
+                        <p className="text-sm font-bold text-blue-900">{viewRow?.date}</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-purple-100 shadow-sm flex flex-col gap-0.5">
+                        <p className="text-xs font-medium text-purple-500 uppercase tracking-wide">Total Duration</p>
+                        <p className="text-xl font-bold text-purple-900 tabular-nums">{totalDuration}</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-green-100 shadow-sm flex flex-col gap-0.5">
+                        <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Check-Ins</p>
+                        <p className="text-2xl font-bold text-green-800">{checkinCount}</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-red-100 shadow-sm flex flex-col gap-0.5">
+                        <p className="text-xs font-medium text-red-500 uppercase tracking-wide">Check-Outs</p>
+                        <p className="text-2xl font-bold text-red-800">{checkoutCount}</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-amber-100 shadow-sm flex flex-col gap-0.5">
+                        <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">Missing Check-Outs</p>
+                        <p className="text-2xl font-bold text-amber-700">{missingCheckouts}</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-orange-100 shadow-sm flex flex-col gap-0.5">
+                        <p className="text-xs font-medium text-orange-600 uppercase tracking-wide">Missing Check-Ins</p>
+                        <p className="text-2xl font-bold text-orange-700">{missingCheckins}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="space-y-4">
               {viewData.map((rec, i) => {
                 const isCheckin  = rec.checkin  !== null;
                 const isCheckout = rec.checkout !== null;
@@ -540,6 +594,7 @@ const Reports = () => {
                 );
               })}
             </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
