@@ -1,3 +1,4 @@
+import * as XLSX from "xlsx";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { FileDown } from "lucide-react";
 
 interface ImportResultModalProps {
   open: boolean;
@@ -33,6 +35,34 @@ export function ImportResultModal({
 }: ImportResultModalProps) {
   const hasData =
     inserted.length > 0 || updated.length > 0 || skipped.length > 0;
+
+  const downloadResults = () => {
+    const rows = [
+      ...inserted.map((r) => ({
+        "Employee ID": r.emp_id ?? "",
+        "Name": r.name ?? "",
+        "Status": "Inserted",
+        "Remark": r.remark ?? "",
+      })),
+      ...updated.map((r) => ({
+        "Employee ID": r.emp_id ?? "",
+        "Name": r.name ?? "",
+        "Status": "Updated",
+        "Remark": r.remark ?? "",
+      })),
+      ...skipped.map((r) => ({
+        "Employee ID": r.emp_id ?? "N/A",
+        "Name": r.name ?? "Unknown",
+        "Status": "Skipped",
+        "Remark": r.reason ?? "",
+      })),
+    ];
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [{ wch: 16 }, { wch: 28 }, { wch: 12 }, { wch: 50 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Import Results");
+    XLSX.writeFile(wb, "import_results.xlsx");
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -91,7 +121,7 @@ export function ImportResultModal({
                         {inserted.map((record, i) => (
                           <TableRow key={i}>
                             <TableCell className="font-medium">
-                              {record.employeeId}
+                              {record.emp_id}
                             </TableCell>
                             <TableCell>{record.name}</TableCell>
                             <TableCell className="text-right text-green-600 text-xs">
@@ -126,7 +156,7 @@ export function ImportResultModal({
                         {updated.map((record, i) => (
                           <TableRow key={i}>
                             <TableCell className="font-medium">
-                              {record.employeeId}
+                              {record.emp_id}
                             </TableCell>
                             <TableCell>{record.name}</TableCell>
                             <TableCell className="text-right text-blue-600 text-xs">
@@ -151,6 +181,7 @@ export function ImportResultModal({
                       <TableHeader className="bg-red-50/50">
                         <TableRow>
                           <TableHead className="w-32">Employee ID</TableHead>
+                          <TableHead className="w-32">Email</TableHead>
                           <TableHead>Details</TableHead>
                           <TableHead className="text-right">
                             Reason for Failure
@@ -161,7 +192,10 @@ export function ImportResultModal({
                         {skipped.map((record, i) => (
                           <TableRow key={i} className="hover:bg-red-50/30">
                             <TableCell className="font-medium text-red-900">
-                              {record.employeeId || "N/A"}
+                              {record.emp_id || "N/A"}
+                            </TableCell>
+                            <TableCell className="font-medium text-red-900">
+                              {record.email || "N/A"}
                             </TableCell>
                             <TableCell className="text-slate-600">
                               {record.name || "Unknown"}
@@ -187,8 +221,17 @@ export function ImportResultModal({
         </div>
       </DialogContent>
 
-      {/* Footer with manual padding */}
-      <div className="p-4 border-t flex justify-end bg-white">
+      {/* Footer */}
+      <div className="p-4 border-t flex justify-between items-center bg-white">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={downloadResults}
+          disabled={!hasData}
+        >
+          <FileDown className="mr-2 h-4 w-4" />
+          Download Results (.xlsx)
+        </Button>
         <Button onClick={onClose} size="lg">
           Done
         </Button>
