@@ -54,7 +54,7 @@ export default function ProjectViewModal({ project, isOpen, onClose }: ProjectVi
             <label className="text-sm font-medium text-gray-500">Entity</label>
             <div className="flex items-center gap-2 mt-1">
               <Building2 className="h-4 w-4 text-gray-400" />
-              <span>{project.entity.entityname}</span>
+              <span>{project.entity?.entityname ?? "—"}</span>
             </div>
           </div>
           
