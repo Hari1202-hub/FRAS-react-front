@@ -41,140 +41,94 @@ export function EmployeeDetailModal({
   onOpenChange,
   employee,
 }: EmployeeDetailModalProps) {
-  if (!employee) return null;
+  // ── State (all hooks before any early return — Rules of Hooks) ───────────────
   const [attendanceHistory, setAttendanceHistory] = useState([]);
   const [assignedProjects, setassignedProjects] = useState([]);
   const [assignedId, setassignedId] = useState("");
   const [selectedProject, SetselectedProject] = useState("");
   const [viewProjectModalOpen, setViewProjectModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-
   const [faceEnrollment, setFaceEnrollment] = useState(employee?.face_enrolled);
 
-  // console.log(employee)
+  // ── Callbacks (defined before useEffect; safe to call only when employee exists) ──
 
   const loadAttendanceHistory = () => {
+    if (!employee) return;
     axios
       .post(
         BASEURL + "web_history",
         { emp_id: employee.guid },
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${TOKEN()}`,
-          },
-        },
+        { headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${TOKEN()}` } },
       )
-      .then((response) => {
-        let attendanceHistory = response.data.data;
-        setAttendanceHistory(attendanceHistory);
-        console.log(attendanceHistory);
-      });
-  };
-
-  const handleRemoveFace = () => {
-    axios
-      .post(
-        BASEURL + "removeEnrolledFace",
-        { empguid: employee.guid },
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${TOKEN()}`,
-          },
-        },
-      )
-      .then(() => {
-        setFaceEnrollment(null);
-
-        toast({
-          title: "Face Enrollment Removed",
-          description: "Employee face enrollment removed successfully.",
-        });
-
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
-      })
-      .catch(() => {
-        toast({
-          title: "Error",
-          description: "Unable to remove face enrollment.",
-          variant: "destructive",
-        });
-      });
+      .then((response) => setAttendanceHistory(response.data.data));
   };
 
   const loadAssignedProjects = () => {
-    console.log(employee);
+    if (!employee) return;
     axios
       .post(
         BASEURL + "get_assigned_projects",
         { user_id: employee.id },
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${TOKEN()}`,
-          },
-        },
+        { headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${TOKEN()}` } },
+      )
+      .then((response) => setassignedProjects(response.data.data));
+  };
+
+  const handleRemoveFace = () => {
+    if (!employee) return;
+    axios
+      .post(
+        BASEURL + "removeEnrolledFace",
+        { empguid: employee.guid },
+        { headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${TOKEN()}` } },
+      )
+      .then(() => {
+        setFaceEnrollment(null);
+        toast({ title: "Face Enrollment Removed", description: "Employee face enrollment removed successfully." });
+        setTimeout(() => window.location.reload(), 1500);
+      })
+      .catch(() => toast({ title: "Error", description: "Unable to remove face enrollment.", variant: "destructive" }));
+  };
+
+  const handleProjectView = () => setViewProjectModalOpen(true);
+
+  const handleEditAssignedProject = (assign_id) => {
+    if (!assign_id) return;
+    axios
+      .post(
+        BASEURL + "show_assigned_project",
+        { assign_id },
+        { headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${TOKEN()}` } },
       )
       .then((response) => {
-        let assigned_projects = response.data.data;
-        setassignedProjects(assigned_projects);
+        SetselectedProject(response.data.data.project_id);
+        setassignedId(response.data.data.id);
+        setViewProjectModalOpen(true);
       });
   };
-  const handleProjectView = () => {
-    setViewProjectModalOpen(true);
-  };
-  const handleEditAssignedProject = (assign_id) => {
-    if (assign_id) {
-      axios
-        .post(
-          BASEURL + "show_assigned_project",
-          { assign_id: assign_id },
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              Authorization: `Bearer ${TOKEN()}`,
-            },
-          },
-        )
-        .then((response) => {
-          console.log(response);
-          SetselectedProject(response.data.data.project_id);
-          setassignedId(response.data.data.id);
-          setViewProjectModalOpen(true);
-        });
-    }
-  };
+
   const handleDeleteAssignedProject = (assign_id) => {
     setDeleteConfirmOpen(true);
     setassignedId(assign_id);
   };
+
   const confirmDelete = () => {
-    if (assignedId) {
-      axios
-        .post(
-          BASEURL + "delete_assigned_project",
-          { assign_id: assignedId },
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              Authorization: `Bearer ${TOKEN()}`,
-            },
-          },
-        )
-        .then((response) => {
-          loadAssignedProjects();
-          setassignedId("");
-          setDeleteConfirmOpen(false);
-          toast({
-            title: "Assigned Project Deleted",
-            description: `Assigned Project deleted successfully.`,
-          });
-        });
-    }
+    if (!assignedId) return;
+    axios
+      .post(
+        BASEURL + "delete_assigned_project",
+        { assign_id: assignedId },
+        { headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${TOKEN()}` } },
+      )
+      .then(() => {
+        loadAssignedProjects();
+        setassignedId("");
+        setDeleteConfirmOpen(false);
+        toast({ title: "Assigned Project Deleted", description: "Assigned Project deleted successfully." });
+      });
   };
+
+  // ── useEffect MUST be before any early return ─────────────────────────────
   useEffect(() => {
     if (open && employee) {
       setFaceEnrollment(employee.face_enrolled);
@@ -182,10 +136,13 @@ export function EmployeeDetailModal({
       loadAssignedProjects();
     }
   }, [open, employee]);
+
+  // Early return AFTER all hooks
+  if (!employee) return null;
   return (
     <div>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[850px] max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[850px] max-h-[85vh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle className="text-xl">Employee Details</DialogTitle>
           </DialogHeader>
@@ -240,25 +197,25 @@ export function EmployeeDetailModal({
                   <div>
                     <p className="text-sm font-medium">Employee ID</p>
                     <p className="text-sm text-gray-500">
-                      {employee.user.emp_id}
+                      {employee.user?.emp_id ?? "—"}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm font-medium">Entity</p>
                     <p className="text-sm text-gray-500">
-                      {employee.entities.entityname}
+                      {employee.entities?.entityname ?? "—"}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm font-medium">Category</p>
                     <p className="text-sm text-gray-500">
-                      {employee.categories.description}
+                      {employee.categories?.description ?? "—"}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm font-medium">Classification</p>
                     <p className="text-sm text-gray-500">
-                      {employee.classifications.description}
+                      {employee.classifications?.description ?? "—"}
                     </p>
                   </div>
                   <div>
@@ -373,7 +330,7 @@ export function EmployeeDetailModal({
                           {record.project.projectname}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          {record.project.entity.entityname}
+                          {record.project.entity?.entityname ?? "—"}
                         </td>
                         <td className="px-4 py-3  text-sm text-gray-900">
                           {record.project.location_shotname}
@@ -494,7 +451,7 @@ export function EmployeeDetailModal({
                           {record.worked_hours}
                         </td>
                         <td className="px-4 py-3  text-sm text-gray-900 font-medium">
-                          {record.created_user.name}
+                          {record.created_user?.name ?? "—"}
                         </td>
                         <td className="px-4 py-3  text-sm text-gray-900 font-medium">
                           {record.attendance_type}
