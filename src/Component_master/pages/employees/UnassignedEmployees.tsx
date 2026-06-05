@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Eye, Search, Filter, UserPlus } from "lucide-react";
+import { SearchableSelect } from "@/components/common/SearchableSelect";
 import {
   Tooltip,
   TooltipContent,
@@ -105,59 +106,43 @@ const UnassignedEmployees = () => {
   return (
     <div className="space-y-6">
       <Card className="p-0 overflow-hidden">
-        <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
+        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[200px] max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-proscape bg-white"
+                placeholder="Search by name or employee ID"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-            <input
-              type="text"
-              className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-proscape"
-              placeholder="Search by name or employee ID"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ minWidth: "160px" }}
-            />
-          </div>
-          <div className="flex flex-col md:flex-row gap-4 md:items-center flex-wrap">
-            <div className="flex items-center">
-              <Filter className="h-5 w-5 text-gray-400 mr-2" />
-              <span className="text-sm text-gray-600 mr-2">Status:</span>
-              <select className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proscape" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ minWidth: "100px" }}>
-                <option value="all">All Status</option>
+            <div className="flex items-center gap-1 text-sm text-gray-500">
+              <Filter className="h-4 w-4" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-xs text-gray-500 font-medium">Status</label>
+              <select className="text-sm border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-proscape bg-white min-w-[100px]" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="all">All</option>
                 <option value="1">Active</option>
                 <option value="0">Inactive</option>
               </select>
             </div>
-            <div className="flex items-center">
-              <span className="text-sm text-gray-600 mr-2">Enrolled:</span>
-              <select className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proscape" value={enrolledFilter} onChange={(e) => setEnrolledFilter(e.target.value)} style={{ width: "120px" }}>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-xs text-gray-500 font-medium">Enrolled</label>
+              <select className="text-sm border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-proscape bg-white min-w-[110px]" value={enrolledFilter} onChange={(e) => setEnrolledFilter(e.target.value)}>
                 <option value="">All</option>
                 <option value="1">Enrolled</option>
                 <option value="2">Not Enrolled</option>
               </select>
             </div>
-            <div className="flex items-center">
-              <span className="text-sm text-gray-600 mr-2">Category:</span>
-              <select className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proscape" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} style={{ minWidth: "100px" }}>
-                <option value="all">All</option>
-                {categories.map((c, i) => <option key={i} value={c.code}>{c.description}</option>)}
-              </select>
-            </div>
-            <div className="flex items-center">
-              <span className="text-sm text-gray-600 mr-2">Classification:</span>
-              <select className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proscape" value={classificationFilter} onChange={(e) => setClassificationFilter(e.target.value)} style={{ maxWidth: "100px" }}>
-                <option value="all">All</option>
-                {classifications.map((c, i) => <option key={i} value={c.code}>{c.description}</option>)}
-              </select>
-            </div>
-            <div className="flex items-center">
-              <span className="text-sm text-gray-600 mr-2">Entity:</span>
-              <select className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-proscape" value={entityFilter} onChange={(e) => setEntityFilter(e.target.value)} style={{ maxWidth: "100px" }}>
-                <option value="all">All</option>
-                {entities.map((e, i) => <option key={i} value={e.id}>{e.entityname}</option>)}
-              </select>
-            </div>
+            <SearchableSelect label="Entity" value={entityFilter} onChange={setEntityFilter}
+              options={entities.map((e) => ({ value: String(e.id), label: e.entityname }))} />
+            <SearchableSelect label="Category" value={categoryFilter} onChange={setCategoryFilter}
+              options={categories.map((c) => ({ value: c.code, label: c.description }))} />
+            <SearchableSelect label="Classification" value={classificationFilter} onChange={setClassificationFilter}
+              options={classifications.map((c) => ({ value: c.code, label: c.description }))} />
           </div>
         </div>
 
