@@ -65,8 +65,7 @@ const Profile = () => {
     })
   }
   
-  // Mock user data
-  const [userData, setUserData] = useState([]);
+  const [userData, setUserData] = useState<any>(null);
 
 
   const loadProfile = () =>{
@@ -164,6 +163,9 @@ const Profile = () => {
     loadCategories();
     loadClassifications();
   },[])
+
+  if (!userData) return <div className="p-8 text-gray-500">Loading profile…</div>;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -175,10 +177,10 @@ const Profile = () => {
           <Card className="p-6">
             <div className="flex flex-col items-center">
               <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                {userData.image && userData.image!=''  ? (
-                  <img 
-                    src={userData.image} 
-                    alt={userData.name} 
+                {userData?.image && userData.image !== ''  ? (
+                  <img
+                    src={userData.image}
+                    alt={userData?.name ?? ''}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -186,7 +188,7 @@ const Profile = () => {
                 )}
               </div>
               
-              <h2 className="mt-4 text-xl font-bold text-gray-900">{userData.name}</h2>
+              <h2 className="mt-4 text-xl font-bold text-gray-900">{userData?.name}</h2>
               <p className="text-gray-500">{userData?.user?.emp_id}</p>
               
               <div className="mt-2">
@@ -268,11 +270,11 @@ const Profile = () => {
                       type="text"
                       name="name"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-proscape"
-                      value={userData.name}
+                      value={userData?.name ?? ''}
                       onChange={handleInputChange}
                     />
                   ) : (
-                    <p className="text-gray-900">{userData.name}</p>
+                    <p className="text-gray-900">{userData?.name}</p>
                   )}
                 </div>
                 
@@ -292,11 +294,11 @@ const Profile = () => {
                       type="email"
                       name="email"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-proscape"
-                      value={userData.email}
+                      value={userData?.email ?? ''}
                       onChange={handleInputChange}
                     />
                   ) : (
-                    <p className="text-gray-900">{userData.email}</p>
+                    <p className="text-gray-900">{userData?.email}</p>
                   )}
                 </div>
                 
@@ -309,11 +311,11 @@ const Profile = () => {
                       type="tel"
                       name="phone"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-proscape"
-                      value={userData.mobile}
+                      value={userData?.mobile ?? ''}
                       onChange={handleInputChange}
                     />
                   ) : (
-                    <p className="text-gray-900">{userData.mobile}</p>
+                    <p className="text-gray-900">{userData?.mobile}</p>
                   )}
                 </div>
                 
@@ -328,11 +330,11 @@ const Profile = () => {
                 value={userData?.entities?.guid}
               >
                 {entities.map((entity, index) => (
-                  (userData.entities.guid == entity.guid?
+                  (userData?.entities?.guid == entity.guid?
                   (
                   <option key={index} value={entity.entityname}>{entity.entityname}</option>
                 ):'')
-                  
+
                 ))}
               </select>
                     
@@ -353,7 +355,7 @@ const Profile = () => {
                 onChange={handleInputChange}
               >
                 {categories.map((category, index1) => (
-                  (userData.categories.guid == category.guid?
+                  (userData?.categories?.guid == category.guid?
                   (
                   <option key={index1} value={category.id}>{category.description}</option>
                   ):'')
@@ -376,7 +378,7 @@ const Profile = () => {
                       onChange={handleInputChange}
                     >
                       {classifications.map((classification, index) => (
-                        (userData.classifications.guid == classification.guid?
+                        (userData?.classifications?.guid == classification.guid?
                           (
                           <option key={index} value={classification.id}>{classification.description}</option>
                           ):"")
