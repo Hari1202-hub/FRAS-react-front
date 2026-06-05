@@ -252,7 +252,7 @@ export function TanseeqImportModal({
         const entity = row["Entity"]?.toString().trim() || "";
         const classification = row["Classification"]?.toString().trim() || "";
         const category = row["Category"]?.toString().trim() || "";
-        const status = row["Status"]?.toString().trim() || "";
+        const status = row["Status"]?.toString().trim() || "Active";
         const emailFromFile = row["Email"]?.toString().trim() || "";
         const contactNumber = row["Contact Number"]?.toString().trim() || "";
 
@@ -341,9 +341,8 @@ export function TanseeqImportModal({
             system.
           </p>
 
-          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 rounded mb-4">
-            Warning: If email IDs of any record exist in this system, The
-            records will be skipped during import.
+          <div className="bg-blue-50 border-l-4 border-blue-400 text-blue-800 p-3 rounded mb-4 text-sm">
+            <strong>Note:</strong> If an employee's email already exists in the system, a unique email will be assigned automatically. The original email and the assigned one will be shown in the import results.
           </div>
 
           {!fetchedEmployees && (
