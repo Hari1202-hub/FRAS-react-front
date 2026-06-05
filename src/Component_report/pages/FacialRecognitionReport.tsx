@@ -8,13 +8,8 @@ import { BASEURL, TOKEN } from "../../app";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { AsyncSearchableSelect } from "@/components/ui/async-searchable-select";
 import {
   Table,
   TableBody,
@@ -121,7 +116,6 @@ const FacialRecognitionReport = () => {
 
   // ── Option lists ─────────────────────────────────────────────────────────
   const [entities, setEntities]               = useState<any[]>([]);
-  const [projects, setProjects]               = useState<any[]>([]);
   const [classifications, setClassifications] = useState<any[]>([]);
   const [attendanceTypes, setAttendanceTypes] = useState<any[]>([]);
 
@@ -139,8 +133,23 @@ const FacialRecognitionReport = () => {
     axios.post(BASEURL + "entities",         {}, { headers }).then((r) => setEntities(r.data?.data || []));
     axios.post(BASEURL + "classifications",  {}, { headers }).then((r) => setClassifications(r.data?.data || []));
     axios.post(BASEURL + "attendancetypes",  {}, { headers }).then((r) => setAttendanceTypes(r.data?.data || []));
-    axios.get(`${BASEURL}v2/projects`,            { headers: { Authorization: `Bearer ${TOKEN()}` } })
-         .then((r) => setProjects(r.data?.data || []));
+  }, []);
+
+  // ── Projects: searched & paginated on the server (loaded on scroll) ────────
+  const fetchProjects = useCallback(async ({ search, page }: { search: string; page: number }) => {
+    const res = await axios.get(`${BASEURL}v2/projects`, {
+      params: { search, page, per_page: 25, active: 1 },
+      headers: { Authorization: `Bearer ${TOKEN()}` },
+    });
+    const items = res.data?.data || [];
+    const m = res.data?.meta;
+    return {
+      options: items.map((p: any) => ({
+        value: String(p.id),
+        label: `${p.projectid} — ${p.projectname}`,
+      })),
+      hasMore: m ? m.current_page < m.last_page : false,
+    };
   }, []);
 
   // ── Reset to page 1 when filters change ──────────────────────────────────
@@ -366,29 +375,29 @@ const FacialRecognitionReport = () => {
             {/* Entity */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Entity</label>
-              <Select value={entityFilter} onValueChange={setEntityFilter}>
-                <SelectTrigger><SelectValue placeholder="All Entities" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Entities</SelectItem>
-                  {entities.map((e: any) => (
-                    <SelectItem key={e.id} value={String(e.id)}>{e.entityname}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={entityFilter}
+                onChange={setEntityFilter}
+                placeholder="All Entities"
+                searchPlaceholder="Search entity…"
+                options={[
+                  { value: "all", label: "All Entities" },
+                  ...entities.map((e: any) => ({ value: String(e.id), label: e.entityname })),
+                ]}
+              />
             </div>
 
             {/* Project */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Project</label>
-              <Select value={projectFilter} onValueChange={setProjectFilter}>
-                <SelectTrigger><SelectValue placeholder="All Projects" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Projects</SelectItem>
-                  {projects.map((p: any) => (
-                    <SelectItem key={p.id} value={String(p.id)}>{p.projectname} ({p.projectid})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <AsyncSearchableSelect
+                value={projectFilter}
+                onChange={setProjectFilter}
+                fetchPage={fetchProjects}
+                staticOptions={[{ value: "all", label: "All Projects" }]}
+                placeholder="All Projects"
+                searchPlaceholder="Search project name or code…"
+              />
             </div>
 
             {/* Timekeeper */}
@@ -414,29 +423,34 @@ const FacialRecognitionReport = () => {
             {/* Classification */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Classification</label>
-              <Select value={classFilter} onValueChange={setClassFilter}>
-                <SelectTrigger><SelectValue placeholder="All" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Classifications</SelectItem>
-                  {classifications.map((c: any, i: number) => (
-                    <SelectItem key={i} value={c.code}>{c.description}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={classFilter}
+                onChange={setClassFilter}
+                placeholder="All Classifications"
+                searchPlaceholder="Search classification…"
+                options={[
+                  { value: "all", label: "All Classifications" },
+                  ...classifications.map((c: any) => ({ value: c.code, label: c.description })),
+                ]}
+              />
             </div>
 
-            {/* Status / Attendance Type */}
+            {/* Attendance Type (filters on attendance_type, distinct from the Present/Absent Status column) */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger><SelectValue placeholder="All Statuses" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  {attendanceTypes.map((t: any, i: number) => (
-                    <SelectItem key={i} value={t.attendance_type}>{t.attendance_type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Attendance Type</label>
+              <SearchableSelect
+                value={statusFilter}
+                onChange={setStatusFilter}
+                placeholder="All Attendance Types"
+                searchPlaceholder="Search attendance type…"
+                options={[
+                  { value: "all", label: "All Attendance Types" },
+                  ...attendanceTypes.map((t: any) => ({
+                    value: t.attendance_type,
+                    label: t.attendance_type,
+                  })),
+                ]}
+              />
             </div>
           </div>
         </div>
