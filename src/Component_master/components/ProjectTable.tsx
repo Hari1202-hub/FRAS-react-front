@@ -43,7 +43,7 @@ export default function ProjectTable({
           <TableRow key={index}>
             <TableCell className="font-medium">{project.projectid}</TableCell>
             <TableCell>{project.projectname}</TableCell>
-            <TableCell>{project.entity.entityname}</TableCell>
+            <TableCell>{project.entity?.entityname ?? <Badge variant="outline" className="text-gray-400">No Entity</Badge>}</TableCell>
             <TableCell>
               {project.location_shotname ? (
                 <span className="text-green-600">
