@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PlaceAutocomplete from "./PlaceAutocomplete";
 import { toast } from "@/hooks/use-toast";
+import { BASEURL, TOKEN } from "../../app";
 
 
 
@@ -49,19 +51,16 @@ export default function AssignLocationModal({
     if (!confirm("Are you sure you want to remove this location?")) return;
 
     try {
-      const response = await fetch(
-        `${config.Base_URL}/api/remove-project-location`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({
-            project_id: project.guid,
-          }),
+      const response = await fetch(`${BASEURL}remove-project-location`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${TOKEN()}`,
         },
-      );
+        body: JSON.stringify({
+          project_id: project.guid,
+        }),
+      });
 
       if (!response.ok) {
         throw new Error("Failed to remove location");
@@ -128,7 +127,8 @@ export default function AssignLocationModal({
 
     const googleMapsScript = document.createElement("script");
     googleMapsScript.src =
-      "https://maps.googleapis.com/maps/api/js?key=AIzaSyA3Dn22K37fJqtA5oU5wmRepaGzoOaDnk8&libraries=places,drawing&v=weekly";
+      // Pinned to v3.64: DrawingManager was removed from the default channel in v3.65
+      "https://maps.googleapis.com/maps/api/js?key=AIzaSyA3Dn22K37fJqtA5oU5wmRepaGzoOaDnk8&libraries=places,drawing&v=3.64";
     googleMapsScript.async = true;
     googleMapsScript.defer = true;
 
@@ -316,61 +316,55 @@ export default function AssignLocationModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="sm:max-w-[425px]"
+        className="max-w-5xl md:max-h-none overflow-y-visible"
         aria-labelledby="dialog-title"
         aria-describedby="dialog-description"
       >
-        <div className="space-y-2">
-          <Label>Search Location</Label>
-          <PlaceAutocomplete
-            onPlaceSelect={(lat, lng) => {
-              if (googleMap.current) {
-                googleMap.current.setCenter({ lat, lng });
-                googleMap.current.setZoom(17);
-              }
-            }}
-          />
-        </div>
         <DialogHeader>
           <DialogTitle id="dialog-title">Assign Location</DialogTitle>
+          <DialogDescription id="dialog-description">
+            {project.projectname} ({project.projectid})
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Search location</Label>
+            <PlaceAutocomplete
+              onPlaceSelect={(lat, lng) => {
+                if (googleMap.current) {
+                  googleMap.current.setCenter({ lat, lng });
+                  googleMap.current.setZoom(17);
+                }
+              }}
+            />
+          </div>
+
           <div
             ref={mapRef}
-            style={{ height: "400px", width: "100%", position: "relative" }}
+            className="h-[440px] w-full overflow-hidden rounded-lg border"
+            style={{ position: "relative" }}
           />
-          <div>
-            <Label>Project</Label>
-            <p className="text-sm text-gray-600">
-              {project.projectname} ({project.projectid})
-            </p>
-          </div>
-          <div>
-            <Input
-              type="hidden"
-              id="latitude"
-              value={latitude}
-              onChange={(e) => setLatitude(e.target.value)}
-              placeholder="Enter project Latitude"
-              required
-            />
-          </div>
-          <div>
-            <Input
-              type="hidden"
-              id="longitude"
-              value={longitude}
-              onChange={(e) => setLongitude(e.target.value)}
-              placeholder="Enter project Longitude"
-              required
-            />
-          </div>
-          <DialogFooter>
+
+          <Input
+            type="hidden"
+            id="latitude"
+            value={latitude}
+            onChange={(e) => setLatitude(e.target.value)}
+          />
+          <Input
+            type="hidden"
+            id="longitude"
+            value={longitude}
+            onChange={(e) => setLongitude(e.target.value)}
+          />
+
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               type="button"
               variant="destructive"
               onClick={handleRemoveLocationFromServer}
+              className="sm:mr-auto"
             >
               Clear Location
             </Button>
