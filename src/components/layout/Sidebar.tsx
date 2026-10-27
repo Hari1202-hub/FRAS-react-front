@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, Settings, Users, Calendar, FileText, User, ChevronDown, ChevronRight, ChevronLeft, Briefcase, CheckCircle, Tag, Menu, X, LogOut, Clock, UserCog, ScanFace, ShieldCheck, Building2, Timer } from "lucide-react";
+import { Home, Settings, Users, Calendar, FileText, User, ChevronDown, ChevronRight, ChevronLeft, Briefcase, CheckCircle, Tag, Menu, X, LogOut, Clock, UserCog, ScanFace, ShieldCheck, Building2, ClipboardList, Timer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -122,6 +122,12 @@ const menuItems: MenuItem[] = [{
       name: "Facial Recognition",
       path: "/reports/facial-recognition",
       icon: <ScanFace className="h-4 w-4" />,
+      requiredPermission: "View Reports",
+    },
+    {
+      name: "Attendance Report V2",
+      path: "/reports/attendance-v2",
+      icon: <ClipboardList className="h-4 w-4" />,
       requiredPermission: "View Reports",
     },
   ],

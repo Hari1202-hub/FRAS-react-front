@@ -30,6 +30,7 @@ import Entities from "./Component_master/pages/Entities";
 // Reports microservice imports
 import Reports from "./Component_report/pages/Reports";
 import FacialRecognitionReport from "./Component_report/pages/FacialRecognitionReport";
+import AttendanceReportV2 from "./Component_report/pages/AttendanceReportV2";
 import ShiftSettings from "./Component_master/pages/ShiftSettings";
 
 import NotFound from "./pages/NotFound";
@@ -72,6 +73,11 @@ const App = () => {
             <Route path="/reports/facial-recognition" element={
               <PermissionGuard requiredPermission="View Reports">
                 <Layout><FacialRecognitionReport /></Layout>
+              </PermissionGuard>
+            } />
+            <Route path="/reports/attendance-v2" element={
+              <PermissionGuard requiredPermission="View Reports">
+                <Layout><AttendanceReportV2 /></Layout>
               </PermissionGuard>
             } />
             <Route path="/settings/shift-timings" element={<Layout><ShiftSettings /></Layout>} />
