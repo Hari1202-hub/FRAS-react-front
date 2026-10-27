@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { formatDailyPunch } from "../utils/dailyPunch";
 import axios from "axios";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -72,21 +73,15 @@ const fmtDate = (d: string): string => {
  * checkin is a TIME string "HH:MM:SS". Combine with the report_date for display.
  */
 const fmtCheckin = (reportDate: string, time: string | null): string => {
-  if (!time) return "—";
-  const [y, m, d] = String(reportDate).split("-");
-  return `${d}/${m}/${y} ${time.substring(0, 5)}`;
+  return formatDailyPunch(reportDate, time);
 };
 
 /**
- * checkout is a TIME string "HH:MM:SS". If checkout < checkin it crossed midnight
- * so the display date is report_date + 1.
+ * Both punches are grouped by their stored date. An earlier checkout does not
+ * prove an overnight shift and must not be displayed on an invented next date.
  */
-const fmtCheckout = (reportDate: string, checkin: string | null, checkout: string | null): string => {
-  if (!checkout) return "—";
-  const base = new Date(reportDate);
-  if (checkin && checkout < checkin) base.setDate(base.getDate() + 1);
-  const [y, m, d] = base.toISOString().split("T")[0].split("-");
-  return `${d}/${m}/${y} ${checkout.substring(0, 5)}`;
+const fmtCheckout = (reportDate: string, _checkin: string | null, checkout: string | null): string => {
+  return formatDailyPunch(reportDate, checkout);
 };
 
 const fmtDuration = (h: number | null): string => {
