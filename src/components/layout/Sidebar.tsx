@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, Settings, Users, Calendar, FileText, User, ChevronDown, ChevronRight, ChevronLeft, Briefcase, CheckCircle, Tag, Menu, X, LogOut, Clock, UserCog, ScanFace, ShieldCheck, Building2 } from "lucide-react";
+import { Home, Settings, Users, Calendar, FileText, User, ChevronDown, ChevronRight, ChevronLeft, Briefcase, CheckCircle, Tag, Menu, X, LogOut, Clock, UserCog, ScanFace, ShieldCheck, Building2, Timer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,6 +12,7 @@ import axios from "axios";
 import { useEffect } from "react";
 import { BASEPATH } from "../../app";
 import { TOKEN } from "../../app";
+import { useIsSuperAdmin } from "@/hooks/use-super-admin";
 
 // Mock function to get current user permissions - in a real app, this would come from an auth context
 const getUserPermissions = () => {
@@ -24,6 +25,7 @@ type SubMenuItem = {
   path: string;
   icon?: React.ReactNode;
   requiredPermission?: string;
+  superAdminOnly?: boolean;
 };
 type MenuItem = {
   name: string;
@@ -80,6 +82,11 @@ const menuItems: MenuItem[] = [{
     path: "/master/entities",
     icon: <Building2 className="h-4 w-4" />,
     requiredPermission: "Manage Entities"
+  }, {
+    name: "Shift Timings",
+    path: "/settings/shift-timings",
+    icon: <Timer className="h-4 w-4" />,
+    superAdminOnly: true
   }]
 }, /* {
   name: "Manual Attendance",
@@ -138,6 +145,7 @@ export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
   const userPermissions = getUserPermissions();
+  const isSuperAdmin = useIsSuperAdmin();
   const [loggedUserName,setLoggedUserName] = useState(null);
   const toggleSubmenu = (menuName: string) => {
     setExpanded(expanded === menuName ? null : menuName);
@@ -187,7 +195,7 @@ export function Sidebar() {
   const processedMenuItems = menuItems.filter(item => !item.hidden).filter(item => !item.requiredPermission || userPermissions.includes(item.requiredPermission)).map(item => {
     if (item.subMenus) {
       if (item.name === "Master") {
-        const organizedSubMenus = item.subMenus.filter(subItem => !subItem.requiredPermission || userPermissions.includes(subItem.requiredPermission));
+        const organizedSubMenus = item.subMenus.filter(subItem => (!subItem.superAdminOnly || isSuperAdmin === true) && (!subItem.requiredPermission || userPermissions.includes(subItem.requiredPermission)));
         return {
           ...item,
           subMenus: organizedSubMenus
@@ -195,7 +203,7 @@ export function Sidebar() {
       }
       return {
         ...item,
-        subMenus: item.subMenus.filter(subItem => !subItem.requiredPermission || userPermissions.includes(subItem.requiredPermission))
+        subMenus: item.subMenus.filter(subItem => (!subItem.superAdminOnly || isSuperAdmin === true) && (!subItem.requiredPermission || userPermissions.includes(subItem.requiredPermission)))
       };
     }
     return item;

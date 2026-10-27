@@ -30,6 +30,7 @@ import Entities from "./Component_master/pages/Entities";
 // Reports microservice imports
 import Reports from "./Component_report/pages/Reports";
 import FacialRecognitionReport from "./Component_report/pages/FacialRecognitionReport";
+import ShiftSettings from "./Component_master/pages/ShiftSettings";
 
 import NotFound from "./pages/NotFound";
 import { BASENAME } from "./app";
@@ -73,6 +74,7 @@ const App = () => {
                 <Layout><FacialRecognitionReport /></Layout>
               </PermissionGuard>
             } />
+            <Route path="/settings/shift-timings" element={<Layout><ShiftSettings /></Layout>} />
             <Route path="/profile" element={<Layout><Profile /></Layout>} />
             {/* Master routes with permission guards */}
             <Route path="/master/employees" element={
