@@ -9,6 +9,8 @@ import { BASEURL, TOKEN } from "../../app";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { AsyncSearchableSelect } from "@/components/ui/async-searchable-select";
 import {
@@ -30,7 +32,12 @@ import {
   ScanFace,
   Loader2,
   Filter,
+  CheckCircle,
+  UserX,
+  UserCheck,
+  Briefcase,
 } from "lucide-react";
+import type { DashboardData } from "../../Component_Dashboard/types/dashboard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -90,6 +97,8 @@ const fmtDuration = (h: number | null): string => {
 };
 
 
+const isPresent = (row: FRRow): boolean => Boolean(row.first_checkin || row.last_checkout);
+
 const getStatusBadge = (present: boolean) =>
   present
     ? "bg-green-100 text-green-700 border-green-200"
@@ -120,6 +129,25 @@ const FacialRecognitionReport = () => {
   const [page, setPage]       = useState(1);
   const [loading, setLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
+  // ── Dashboard stats (for single-day view) ────────────────────────────────
+  const isSingleDay = fromDate === toDate;
+  const [dashData, setDashData]       = useState<DashboardData | null>(null);
+  const [dashLoading, setDashLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isSingleDay) { setDashData(null); return; }
+    setDashLoading(true);
+    setDashData(null);
+    axios
+      .get(`${BASEURL}v2/dashboard`, {
+        params: { date: fromDate },
+        headers: { Authorization: `Bearer ${TOKEN()}` },
+      })
+      .then((r) => setDashData(r.data?.data ?? null))
+      .catch(() => {})
+      .finally(() => setDashLoading(false));
+  }, [fromDate, isSingleDay]);
 
   // ── Load filter option lists ──────────────────────────────────────────────
   useEffect(() => {
@@ -188,12 +216,14 @@ const FacialRecognitionReport = () => {
     });
   }, [page, fromDate, toDate, entityFilter, projectFilter, timekeeperFilter, employeeIdFilter, classFilter, statusFilter]);
 
-  // ── Summary totals (current page) ────────────────────────────────────────
-  const totalDuration = data.reduce((s, r) => s + (Number(r.duration_hours) || 0), 0);
-  // Cross-midnight: checkout TIME string < checkin TIME string (both "HH:MM:SS")
-  const nightShifts = data.filter(
-    (r) => r.first_checkin && r.last_checkout && r.last_checkout < r.first_checkin
+  // ── Page-level summary totals (labelled clearly as "this page") ──────────
+  const totalDuration  = data.reduce((s, r) => s + (Number(r.duration_hours) || 0), 0);
+  const nightShifts    = data.filter(
+    (r) => r.first_checkin && r.last_checkout && r.last_checkout < r.first_checkin,
   ).length;
+  const pagePresent    = data.filter(isPresent).length;
+  const pageAbsent     = data.filter((r) => !isPresent(r)).length;
+  const avgDuration    = data.length > 0 ? totalDuration / data.length : 0;
 
   // ── Column map for exports ────────────────────────────────────────────────
   const toExportRow = (r: FRRow) => ({
@@ -207,7 +237,7 @@ const FacialRecognitionReport = () => {
     "First Check In":  fmtCheckin(r.report_date, r.first_checkin),
     "Last Check Out":  fmtCheckout(r.report_date, r.first_checkin, r.last_checkout),
     "Duration (hrs)":  r.duration_hours != null ? Number(r.duration_hours).toFixed(2) : "",
-    Status:          r.first_checkin ? "Present" : "Absent",
+    Status:          isPresent(r) ? "Present" : "Absent",
   });
 
   // ── Export Excel ──────────────────────────────────────────────────────────
@@ -248,7 +278,7 @@ const FacialRecognitionReport = () => {
           fmtCheckin(r.report_date, r.first_checkin),
           fmtCheckout(r.report_date, r.first_checkin, r.last_checkout),
           r.duration_hours != null ? Number(r.duration_hours).toFixed(2) : "—",
-          r.first_checkin ? "Present" : "Absent",
+          isPresent(r) ? "Present" : "Absent",
         ]),
         styles: { fontSize: 7, cellPadding: 2 },
         headStyles: { fillColor: [30, 64, 175] },
@@ -297,51 +327,206 @@ const FacialRecognitionReport = () => {
         </div>
       </div>
 
-      {/* ── Summary Cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Total Records</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{meta.total}</div>
-            <p className="text-xs text-muted-foreground">Matching filters</p>
-          </CardContent>
-        </Card>
+      {/* ── Stats section ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-gray-700">
+              {isSingleDay ? `Daily Overview — ${fromDate}` : `Range Overview — ${fmtDate(fromDate)} to ${fmtDate(toDate)}`}
+            </h2>
+            {dashLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Total Duration</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalDuration.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">Hours (current page)</p>
-          </CardContent>
-        </Card>
+        {/* Single-day: dashboard-powered stats */}
+        {isSingleDay && (
+          <>
+            {/* Attendance rate bar */}
+            {!dashLoading && dashData && (
+              <div className="bg-gray-50 rounded-lg px-4 py-3 flex items-center gap-4">
+                <span className="text-xs font-medium text-gray-500 shrink-0">Attendance Rate</span>
+                <Progress
+                  value={
+                    dashData.staff.total_active > 0
+                      ? Math.round(((dashData.staff.total_active - dashData.attendance.absent) / dashData.staff.total_active) * 100)
+                      : 0
+                  }
+                  className="h-2 flex-1"
+                />
+                <span className="text-sm font-bold text-gray-800 shrink-0 tabular-nums">
+                  {dashData.staff.total_active > 0
+                    ? Math.round(((dashData.staff.total_active - dashData.attendance.absent) / dashData.staff.total_active) * 100)
+                    : 0}%
+                </span>
+                <span className="text-xs text-gray-400 shrink-0">
+                  {(dashData.staff.total_active - dashData.attendance.absent).toLocaleString()} / {dashData.staff.total_active.toLocaleString()}
+                </span>
+              </div>
+            )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Date Range</CardTitle>
-            <CalendarRange className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm font-bold">{fmtDate(fromDate)}</div>
-            <p className="text-xs text-muted-foreground">to {fmtDate(toDate)}</p>
-          </CardContent>
-        </Card>
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+              <Card className="border-l-4 border-l-green-500">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-gray-500">Checked In</span>
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  </div>
+                  {dashLoading ? <Skeleton className="h-8 w-16" /> : (
+                    <div className="text-2xl font-bold text-gray-900">
+                      {dashData?.attendance.checked_in.toLocaleString() ?? "—"}
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">employees today</p>
+                </CardContent>
+              </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Night Shifts</CardTitle>
-            <ScanFace className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-700">{nightShifts}</div>
-            <p className="text-xs text-muted-foreground">Cross-midnight (this page)</p>
-          </CardContent>
-        </Card>
+              <Card className="border-l-4 border-l-amber-500">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-gray-500">Still Inside</span>
+                    <Clock className="h-4 w-4 text-amber-500" />
+                  </div>
+                  {dashLoading ? <Skeleton className="h-8 w-16" /> : (
+                    <div className="text-2xl font-bold text-gray-900">
+                      {dashData?.attendance.still_inside.toLocaleString() ?? "—"}
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">checked in, not out</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-red-500">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-gray-500">Absent</span>
+                    <UserX className="h-4 w-4 text-red-500" />
+                  </div>
+                  {dashLoading ? <Skeleton className="h-8 w-16" /> : (
+                    <div className="text-2xl font-bold text-gray-900">
+                      {dashData?.attendance.absent.toLocaleString() ?? "—"}
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">no check-in or checkout today</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-indigo-500">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-gray-500">Face Enrolled</span>
+                    <UserCheck className="h-4 w-4 text-indigo-500" />
+                  </div>
+                  {dashLoading ? <Skeleton className="h-8 w-16" /> : (
+                    <div className="text-2xl font-bold text-gray-900">
+                      {dashData?.staff.total_enrolled.toLocaleString() ?? "—"}
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">
+                    {dashData ? `of ${dashData.staff.total_active.toLocaleString()} active` : "employees"}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-purple-500">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-gray-500">Active Projects</span>
+                    <Briefcase className="h-4 w-4 text-purple-500" />
+                  </div>
+                  {dashLoading ? <Skeleton className="h-8 w-16" /> : (
+                    <div className="text-2xl font-bold text-gray-900">
+                      {dashData?.projects.total_active.toLocaleString() ?? "—"}
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">total active</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-teal-500">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-gray-500">Punches Out of Order</span>
+                    <ScanFace className="h-4 w-4 text-teal-500" />
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900">{nightShifts}</div>
+                  <p className="text-xs text-gray-400 mt-1">punches out of order (page)</p>
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
+
+        {/* Date-range: page-based stats (clearly labelled) */}
+        {!isSingleDay && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Card className="border-l-4 border-l-blue-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-500">Total Records</span>
+                  <Users className="h-4 w-4 text-blue-500" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{meta.total.toLocaleString()}</div>
+                <p className="text-xs text-gray-400 mt-1">matching filters</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-green-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-500">Present (page)</span>
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{pagePresent}</div>
+                <p className="text-xs text-gray-400 mt-1">of {data.length} on this page</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-amber-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-500">Avg Duration (page)</span>
+                  <Clock className="h-4 w-4 text-amber-500" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{avgDuration.toFixed(1)}</div>
+                <p className="text-xs text-gray-400 mt-1">hours / record</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-teal-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-500">Punches Out of Order (page)</span>
+                  <ScanFace className="h-4 w-4 text-teal-500" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{nightShifts}</div>
+                <p className="text-xs text-gray-400 mt-1">punches out of order</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Filtered view strip (always shown) */}
+        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground bg-muted/30 rounded-lg px-4 py-2">
+          <Users className="h-3.5 w-3.5 shrink-0" />
+          <span>
+            Filtered view:&nbsp;
+            <span className="font-semibold text-foreground">{meta.total.toLocaleString()}</span>
+            &nbsp;FR records
+            {isSingleDay && (
+              <>
+                &nbsp;·&nbsp;
+                <span className="font-semibold text-foreground text-green-700">{pagePresent}</span>
+                &nbsp;present /&nbsp;
+                <span className="font-semibold text-foreground text-red-600">{pageAbsent}</span>
+                &nbsp;absent (this page)
+              </>
+            )}
+            &nbsp;·&nbsp;
+            <Clock className="h-3 w-3 inline mx-0.5" />
+            <span className="font-semibold text-foreground">{totalDuration.toFixed(1)} hrs</span>
+            &nbsp;total (this page)
+          </span>
+        </div>
       </div>
 
 
@@ -510,8 +695,8 @@ const FacialRecognitionReport = () => {
                         {fmtDuration(r.duration_hours)}
                       </TableCell>
                       <TableCell className="text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusBadge(!!r.first_checkin)}`}>
-                          {r.first_checkin ? "Present" : "Absent"}
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusBadge(isPresent(r))}`}>
+                          {isPresent(r) ? "Present" : "Absent"}
                         </span>
                       </TableCell>
                     </TableRow>

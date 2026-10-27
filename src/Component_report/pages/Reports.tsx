@@ -8,7 +8,8 @@ import { BASEURL, TOKEN } from "../../app";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -22,7 +23,9 @@ import {
   Download, FileText, Users, Clock, CalendarRange,
   ChevronLeft, ChevronRight, Eye, Loader2, MapPin,
   LogIn, LogOut, ArrowLeftRight, BarChart2,
+  CheckCircle, UserX, UserCheck, Briefcase, RefreshCw,
 } from "lucide-react";
+import type { DashboardData } from "../../Component_Dashboard/types/dashboard";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -114,6 +117,23 @@ const Reports = () => {
   const [page, setPage]       = useState(1);
   const [loading, setLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
+  // ── Dashboard stats (reliable global numbers for the selected date) ───────
+  const [dashData, setDashData]         = useState<DashboardData | null>(null);
+  const [dashLoading, setDashLoading]   = useState(false);
+
+  useEffect(() => {
+    setDashLoading(true);
+    setDashData(null);
+    axios
+      .get(`${BASEURL}v2/dashboard`, {
+        params: { date },
+        headers: { Authorization: `Bearer ${TOKEN()}` },
+      })
+      .then((r) => setDashData(r.data?.data ?? null))
+      .catch(() => {})
+      .finally(() => setDashLoading(false));
+  }, [date]);
 
   // ── Detail modal state ────────────────────────────────────────────────────
   const [viewOpen, setViewOpen]       = useState(false);
@@ -626,51 +646,179 @@ const Reports = () => {
           </div>
         </div>
 
-        {/* Summary cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Total Records</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{meta.total}</div>
-              <p className="text-xs text-muted-foreground">Matching filters</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Present</CardTitle>
-              <Users className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{presentCount}</div>
-              <p className="text-xs text-muted-foreground">This page</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Absent</CardTitle>
-              <Users className="h-4 w-4 text-red-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{absentCount}</div>
-              <p className="text-xs text-muted-foreground">This page</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {Math.floor(totalMinutes / 60)}h{" "}
-                <span className="text-lg text-muted-foreground font-normal">{totalMinutes % 60}m</span>
-              </div>
-              <p className="text-xs text-muted-foreground">This page</p>
-            </CardContent>
-          </Card>
+        {/* ── Dashboard-sourced stats (reliable global numbers) ── */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-gray-700">
+                Daily Overview — {date}
+              </h2>
+              {dashLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+            </div>
+          </div>
+
+          {/* Attendance rate bar */}
+          {!dashLoading && dashData && (
+            <div className="bg-gray-50 rounded-lg px-4 py-3 flex items-center gap-4">
+              <span className="text-xs font-medium text-gray-500 shrink-0">Attendance Rate</span>
+              <Progress
+                value={
+                  dashData.staff.total_active > 0
+                    ? Math.round(((dashData.staff.total_active - dashData.attendance.absent) / dashData.staff.total_active) * 100)
+                    : 0
+                }
+                className="h-2 flex-1"
+              />
+              <span className="text-sm font-bold text-gray-800 shrink-0 tabular-nums">
+                {dashData.staff.total_active > 0
+                  ? Math.round(((dashData.staff.total_active - dashData.attendance.absent) / dashData.staff.total_active) * 100)
+                  : 0}%
+              </span>
+              <span className="text-xs text-gray-400 shrink-0">
+                {(dashData.staff.total_active - dashData.attendance.absent).toLocaleString()} / {dashData.staff.total_active.toLocaleString()}
+              </span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+            {/* Checked In */}
+            <Card className="border-l-4 border-l-green-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-500">Checked In</span>
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                </div>
+                {dashLoading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <div className="text-2xl font-bold text-gray-900">
+                    {dashData?.attendance.checked_in.toLocaleString() ?? "—"}
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-1">employees today</p>
+              </CardContent>
+            </Card>
+
+            {/* Checked Out */}
+            <Card className="border-l-4 border-l-amber-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-500">Checked Out</span>
+                  <LogOut className="h-4 w-4 text-amber-500" />
+                </div>
+                {dashLoading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <div className="text-2xl font-bold text-gray-900">
+                    {dashData?.attendance.checked_out.toLocaleString() ?? "—"}
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-1">completed for day</p>
+              </CardContent>
+            </Card>
+
+            {/* Still Inside */}
+            <Card className="border-l-4 border-l-blue-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-500">Still Inside</span>
+                  <Clock className="h-4 w-4 text-blue-500" />
+                </div>
+                {dashLoading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <div className="text-2xl font-bold text-gray-900">
+                    {dashData?.attendance.still_inside.toLocaleString() ?? "—"}
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-1">checked in, not out</p>
+              </CardContent>
+            </Card>
+
+            {/* Absent */}
+            <Card className="border-l-4 border-l-red-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-500">Absent</span>
+                  <UserX className="h-4 w-4 text-red-500" />
+                </div>
+                {dashLoading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <div className="text-2xl font-bold text-gray-900">
+                    {dashData?.attendance.absent.toLocaleString() ?? "—"}
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-1">no check-in or checkout recorded</p>
+              </CardContent>
+            </Card>
+
+            {/* Face Enrolled */}
+            <Card className="border-l-4 border-l-indigo-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-500">Face Enrolled</span>
+                  <UserCheck className="h-4 w-4 text-indigo-500" />
+                </div>
+                {dashLoading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <div className="text-2xl font-bold text-gray-900">
+                    {dashData
+                      ? `${dashData.staff.total_enrolled.toLocaleString()}`
+                      : "—"}
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-1">
+                  {dashData
+                    ? `of ${dashData.staff.total_active.toLocaleString()} active`
+                    : "employees"}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Active Projects */}
+            <Card className="border-l-4 border-l-purple-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-500">Active Projects</span>
+                  <Briefcase className="h-4 w-4 text-purple-500" />
+                </div>
+                {dashLoading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <div className="text-2xl font-bold text-gray-900">
+                    {dashData?.projects.total_active.toLocaleString() ?? "—"}
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-1">
+                  {dashData
+                    ? `${dashData.projects.checkins_by_project.length} with check-ins`
+                    : "projects"}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filtered view strip */}
+          <div className="flex items-center gap-3 text-xs text-muted-foreground bg-muted/30 rounded-lg px-4 py-2">
+            <Users className="h-3.5 w-3.5 shrink-0" />
+            <span>
+              Filtered view:&nbsp;
+              <span className="font-semibold text-foreground">{meta.total.toLocaleString()}</span>
+              &nbsp;records match your filters
+              {totalMinutes > 0 && (
+                <>
+                  &nbsp;·&nbsp;
+                  <Clock className="h-3 w-3 inline mx-0.5" />
+                  <span className="font-semibold text-foreground">
+                    {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m
+                  </span>
+                  &nbsp;worked (this page)
+                </>
+              )}
+            </span>
+          </div>
         </div>
 
         {/* Filters */}
