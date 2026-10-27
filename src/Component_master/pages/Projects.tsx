@@ -6,6 +6,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import ProjectTable from "../components/ProjectTable";
 import ProjectCardMobile from "../components/ProjectCardMobile";
 import ProjectViewModal from "../components/ProjectViewModal";
+import EditProjectModal from "../components/EditProjectModal";
 import AssignLocationModal from "../components/AssignLocationModal";
 import ImportProjectsModal from "../components/ImportProjectsModal";
 import TanseeqProjectsImportModal from "../components/TanseeqProjectsImportModal";
@@ -24,6 +25,7 @@ export default function Projects() {
   const [viewType, setViewType] = useState<"grid" | "list">("list");
   const [selectedProject, setSelectedProject] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [tanseeqImportModalOpen, setTanseeqImportModalOpen] = useState(false);
@@ -88,6 +90,11 @@ export default function Projects() {
   const handleView = (project: any) => {
     setSelectedProject(project);
     setViewModalOpen(true);
+  };
+
+  const handleEdit = (project: any) => {
+    setSelectedProject(project);
+    setEditModalOpen(true);
   };
 
   const handleAssignLocation = (project: any) => {
@@ -310,6 +317,7 @@ export default function Projects() {
                   key={project.id}
                   project={project}
                   onView={handleView}
+                  onEdit={handleEdit}
                   onDelete={handleDelete}
                   onAssignLocation={handleAssignLocation}
                 />
@@ -321,6 +329,7 @@ export default function Projects() {
             <ProjectTable
               projects={filteredProjects}
               onView={handleView}
+              onEdit={handleEdit}
               onDelete={handleDelete}
               onAssignLocation={handleAssignLocation}
             />
@@ -371,6 +380,13 @@ export default function Projects() {
       </div>
 
       {/* Modals */}
+      <EditProjectModal
+        project={selectedProject}
+        entities={entities}
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        onSaved={loadProjects}
+      />
       <ProjectViewModal
         project={selectedProject}
         isOpen={viewModalOpen}

@@ -8,13 +8,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Eye, MapPin, Trash2 } from "lucide-react";
+import { Eye, MapPin, Trash2, Pencil } from "lucide-react";
 
 interface ProjectTableProps {
   projects: any[];
   onView: (project: any) => void;
   onDelete: (project: any) => void;
   onAssignLocation: (project: any) => void;
+  onEdit: (project: any) => void;
 }
 
 export default function ProjectTable({
@@ -22,6 +23,7 @@ export default function ProjectTable({
   onView,
   onDelete,
   onAssignLocation,
+  onEdit,
 }: ProjectTableProps) {
   return (
     <Table>
@@ -39,8 +41,8 @@ export default function ProjectTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {projects.map((project, index) => (
-          <TableRow key={index}>
+        {projects.map((project) => (
+          <TableRow key={project.guid}>
             <TableCell className="font-medium">{project.projectid}</TableCell>
             <TableCell>{project.projectname}</TableCell>
             <TableCell>{project.entity?.entityname ?? <Badge variant="outline" className="text-gray-400">No Entity</Badge>}</TableCell>
@@ -87,6 +89,9 @@ export default function ProjectTable({
             </TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-2">
+                <Button variant="ghost" size="sm" onClick={() => onEdit(project)} aria-label={`Edit project ${project.projectid}`} title="Edit project" className="h-8 w-8 p-0">
+                  <Pencil className="h-4 w-4" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"

@@ -2,16 +2,17 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, MapPin, Trash2, Calendar, Building2 } from "lucide-react";
+import { Eye, MapPin, Trash2, Calendar, Building2, Pencil } from "lucide-react";
 
 interface ProjectCardMobileProps {
   project: any;
   onView: (project: any) => void;
   onDelete: (project: any) => void;
   onAssignLocation: (project: any) => void;
+  onEdit: (project: any) => void;
 }
 
-export default function ProjectCardMobile({ project, onView, onDelete, onAssignLocation }: ProjectCardMobileProps) {
+export default function ProjectCardMobile({ project, onView, onDelete, onAssignLocation, onEdit }: ProjectCardMobileProps) {
   return (
     <Card className="p-4 space-y-3">
       <div className="flex justify-between items-start">
@@ -30,7 +31,7 @@ export default function ProjectCardMobile({ project, onView, onDelete, onAssignL
       <div className="space-y-2 text-sm">
         <div className="flex items-center gap-2">
           <Building2 className="h-4 w-4 text-gray-400" />
-          <span>{project.entity.entityname}</span>
+          <span>{project.entity?.entityname ?? "No Entity"}</span>
         </div>
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-gray-400" />
@@ -49,6 +50,9 @@ export default function ProjectCardMobile({ project, onView, onDelete, onAssignL
       </div>
 
       <div className="flex justify-end gap-2 pt-2">
+        <Button variant="outline" size="sm" onClick={() => onEdit(project)} aria-label={`Edit project ${project.projectid}`} title="Edit project">
+          <Pencil className="h-4 w-4" />
+        </Button>
         <Button
           variant="outline"
           size="sm"
