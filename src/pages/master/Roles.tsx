@@ -22,6 +22,7 @@ import { toast } from "@/components/ui/use-toast";
 import axios from "axios";
 import { BASEURL } from "../../app";
 import { TOKEN } from "../../app";
+import AttendanceMarkerToggles, { ATTENDANCE_MARKERS } from "../../Component_master/components/AttendanceMarkerToggles";
 
 import { useEffect } from "react";
 // Updated lists of all possible permissions separated by platform
@@ -59,7 +60,8 @@ const Roles = () => {
     name: "",
     description: "",
     webPermissions: [],
-    mobilePermissions: ['Dashboard']
+    mobilePermissions: ['Dashboard'],
+    attendanceMarker: ""
   });
   const [activeTab, setActiveTab] = useState("web");
   const [validationError, setValidationError] = useState("");
@@ -188,6 +190,7 @@ const Roles = () => {
     formData.append("description", newRole.description);
     formData.append("webPermissions", newRole.webPermissions);
     formData.append("mobilePermissions", newRole.mobilePermissions);
+    formData.append("attendanceMarker", newRole.attendanceMarker);
 
     
     axios.post(BASEURL+'create_role', formData, {
@@ -199,7 +202,8 @@ const Roles = () => {
           name: "",
           description: "",
           webPermissions: [],
-          mobilePermissions: []
+          mobilePermissions: [],
+          attendanceMarker: ""
         });
         toast({
           title: "Success",
@@ -242,7 +246,8 @@ const Roles = () => {
     setSelectedRole({
       ...role,
       webPermissions,
-      mobilePermissions
+      mobilePermissions,
+      attendanceMarker: role.attendance_marker ?? ""
     });
     setIsEditModalOpen(true);
   };
@@ -258,6 +263,7 @@ const Roles = () => {
     formData.append("description", selectedRole.roledesc);
     formData.append("webPermissions", selectedRole.webPermissions);
     formData.append("mobilePermissions", selectedRole.mobilePermissions);
+    formData.append("attendanceMarker", selectedRole.attendanceMarker);
 
     axios.post(BASEURL+'update_role', formData, {
       headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${TOKEN()}` }
@@ -267,7 +273,8 @@ const Roles = () => {
           name: "",
           description: "",
           webPermissions: [],
-          mobilePermissions: []
+          mobilePermissions: [],
+          attendanceMarker: ""
         });
         toast({
           title: "Success",
@@ -405,7 +412,12 @@ const Roles = () => {
                         <span className="ml-2 text-xs text-gray-500">(System)</span>
                       )}
                     </TableCell>
-                    <TableCell className="font-medium text-gray-900">{role.rolename}</TableCell>
+                    <TableCell className="font-medium text-gray-900">
+                      {role.rolename}
+                      {ATTENDANCE_MARKERS.filter(m => m.value === role.attendance_marker).map(m => (
+                        <span key={m.value} className={`ml-2 inline-block rounded px-2 py-0.5 text-xs font-medium ${m.badge}`}>{m.label}</span>
+                      ))}
+                    </TableCell>
                     <TableCell>{role.roledesc}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
@@ -515,6 +527,12 @@ const Roles = () => {
                     onChange={(e) => setNewRole({...newRole, description: e.target.value})}
                   ></textarea>
                 </div>
+
+                <AttendanceMarkerToggles
+                  idPrefix="create-role-marker"
+                  value={newRole.attendanceMarker}
+                  onChange={(attendanceMarker) => setNewRole({...newRole, attendanceMarker})}
+                />
                 
                 <div>
                   <div className="flex items-center justify-between mb-3">
@@ -672,6 +690,12 @@ const Roles = () => {
                     value={selectedRole.roledesc}
                   onChange={(e) => setSelectedRole({...selectedRole, roledesc: e.target.value})}></textarea>
                 </div>
+
+                <AttendanceMarkerToggles
+                  idPrefix="edit-role-marker"
+                  value={selectedRole.attendanceMarker}
+                  onChange={(attendanceMarker) => setSelectedRole({...selectedRole, attendanceMarker})}
+                />
                 
                 <div>
                   <div className="flex items-center justify-between mb-3">
